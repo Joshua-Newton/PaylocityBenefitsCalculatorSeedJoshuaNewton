@@ -1,4 +1,37 @@
+import { useState } from "react";
+import { baseUrl } from "./Constants";
+
 const AddEmployeeModal = (props) => {
+
+    const [ID, setID] = useState('')
+
+    const handleChange = event => {
+        setID(event.target.value);
+    }
+    
+    const SubmitEmployee = async () => {
+        const employeeData = {
+            id: ID,
+            firstName: "FirstName",
+            lastName: "LastName",
+            dateOfBirth: new Date(2020,0,12),
+            salary: "80000",
+            dependents: []
+        }
+    
+        const result = await fetch(`${baseUrl}/api/v1/Employees/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type' : 'application/json'
+            },
+            body: JSON.stringify(employeeData),
+            type: 'json'
+        })
+
+        const resultInJSON = await result.json();
+        console.log(resultInJSON);
+    }    
+
     return (
         <div className="modal fade" id="add-employee-modal" tabIndex="-1" aria-labelledby="add-employee-modal-label" aria-hidden="true">
             <div className="modal-dialog">
@@ -13,7 +46,7 @@ const AddEmployeeModal = (props) => {
                                 <label>ID</label>
                             </div>
                             <div className="col-9">
-                                <input id="idInput" type={"text"}></input>
+                                <input id="idInput" type={"text"} onChange={handleChange}></input>
                             </div>
                         </div>
                         <div className="row">
@@ -63,12 +96,13 @@ const AddEmployeeModal = (props) => {
                     </div>
                     <div className="modal-footer">
                         <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="button" className="btn btn-primary">Save changes</button>
+                        <button type="button" className="btn btn-primary" onClick={SubmitEmployee}>Save changes</button>
                     </div>
                 </div>
             </div>
         </div>
     );
 };
+
 
 export default AddEmployeeModal;

@@ -7,7 +7,7 @@ using Swashbuckle.AspNetCore.Annotations;
 namespace Api.Controllers
 {
     [ApiController]
-    [Route("api/v1/[controller]")]
+    [Route("api/v1/Employees")]
     public class EmployeesController : ControllerBase
     {
         [SwaggerOperation(Summary = "Get employee by id")]
@@ -100,8 +100,20 @@ namespace Api.Controllers
         [SwaggerOperation(Summary = "Add employee")]
         [HttpPost]
         public async Task<ActionResult<ApiResponse<List<AddEmployeeDto>>>> AddEmployee(AddEmployeeDto newEmployee)
-        { 
-            throw new NotImplementedException();
+        {
+            var employeesList = new List<AddEmployeeDto>();
+            employeesList.Add(newEmployee);
+
+            // Store employee?
+
+            var result = new ApiResponse<List<AddEmployeeDto>>
+            {
+                Data = employeesList,
+                Success = true
+            };
+
+            return result;
+            //throw new NotImplementedException();
         }
 
         [SwaggerOperation(Summary = "Update employee")]

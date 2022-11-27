@@ -9,7 +9,12 @@ const EmployeeListing = () => {
 
     useEffect(() => {
         async function getEmployees() {
-            const raw = await fetch(`${baseUrl}/api/v1/Employees`);
+            const raw = await fetch(`${baseUrl}/api/v1/Employees`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type' : 'application/json'
+                }
+            });
             const response = await raw.json();
             if (response.success) {
                 setEmployees(response.data);
