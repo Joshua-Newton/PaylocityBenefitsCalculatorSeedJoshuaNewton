@@ -7,7 +7,6 @@ using System.Text.Json;
 
 namespace Api.Controllers
 {
-
     [ApiController]
     [Route("api/v1/Employees")]
     public class EmployeesController : ControllerBase
@@ -81,7 +80,7 @@ namespace Api.Controllers
 
                 employees.Add(newEmployeeRecord);
 
-                serializeEmployeeCollection(employees);
+                SerializeEmployeeCollection(employees);
                 
                 var result = new ApiResponse<List<AddEmployeeDto>>
                 {
@@ -111,14 +110,8 @@ namespace Api.Controllers
             // Retrieve list of employees
             var employees = getAllEmployees();
 
-            // Use LINQ to quickly get the record that matches the id given
-            IEnumerable<GetEmployeeDto> employeeAsCollection =
-                from employeeObject in employees
-                where employeeObject.Id == id
-                select employeeObject;
-
             // Retrieve the matching record
-            GetEmployeeDto employeeAsDTO = employeeAsCollection.FirstOrDefault();
+            GetEmployeeDto employeeAsDTO = GetEmployeeGivenId(id, employees);
 
             // If the matching record is not null, then we can update it.
             if(employeeAsDTO != null)
@@ -128,7 +121,7 @@ namespace Api.Controllers
                 employeeAsDTO.LastName = updatedEmployee.LastName;
                 employeeAsDTO.Salary = updatedEmployee.Salary;
 
-                serializeEmployeeCollection(employees);
+                SerializeEmployeeCollection(employees);
 
                 var result = new ApiResponse<GetEmployeeDto>
                 {
@@ -154,7 +147,29 @@ namespace Api.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse<List<GetEmployeeDto>>>> DeleteEmployee(int id)
         {
-            throw new NotImplementedException();
+            var employees = getAllEmployees();
+            var targetEmployee = GetEmployeeGivenId(id, employees);
+            employees.Remove(targetEmployee);
+
+            // Update IDs beyond this one
+            IEnumerable<GetEmployeeDto> employeesAsCollection =
+                from employeeObject in employees
+                where employeeObject.Id > id
+                select employeeObject;
+            foreach(GetEmployeeDto employeeDTO in employeesAsCollection)
+            {
+                employeeDTO.Id -= 1;
+            }
+
+            SerializeEmployeeCollection(employees);
+
+            var result = new ApiResponse<List<GetEmployeeDto>>
+            {
+                Data = employees,
+                Message = "Employee Deleted",
+                Success = true
+            };
+            return result;
         }
 
         private List<GetEmployeeDto> getAllEmployees()
@@ -175,7 +190,7 @@ namespace Api.Controllers
             return employees;
         }
 
-        private async void serializeEmployeeCollection(List<GetEmployeeDto> employees)
+        private async void SerializeEmployeeCollection(List<GetEmployeeDto> employees)
         {
             var serializeOptions = new JsonSerializerOptions
             {
@@ -185,6 +200,20 @@ namespace Api.Controllers
             await JsonSerializer.SerializeAsync(createStream, employees, serializeOptions);
             await createStream.DisposeAsync();
 
+        }
+
+        private GetEmployeeDto GetEmployeeGivenId(int id, List<GetEmployeeDto> employees)
+        {
+            // Use LINQ to quickly get the record that matches the id given
+            IEnumerable<GetEmployeeDto> employeeAsCollection =
+                from employeeObject in employees
+                where employeeObject.Id == id
+                select employeeObject;
+
+            // Retrieve the matching record
+            GetEmployeeDto employeeAsDTO = employeeAsCollection.FirstOrDefault();
+
+            return employeeAsDTO;
         }
     }
 }
