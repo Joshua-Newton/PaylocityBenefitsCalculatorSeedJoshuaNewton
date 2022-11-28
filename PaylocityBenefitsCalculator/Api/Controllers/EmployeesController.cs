@@ -17,14 +17,39 @@ namespace Api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<GetEmployeeDto>>> Get(int id)
         {
-            throw new NotImplementedException();
+            var employees = HelperFunctions.GetAllEmployees();
+            IEnumerable<GetEmployeeDto> employeesAsCollection = 
+                from employeeObject in employees
+                where employeeObject.Id == id
+                select employeeObject;
+            GetEmployeeDto targetEmployee = employeesAsCollection.FirstOrDefault();
+
+            if(targetEmployee != null)
+            {
+                var result = new ApiResponse<GetEmployeeDto>()
+                {
+                    Data = targetEmployee,
+                    Success = true,
+                    Message = "Employee Found"
+                };
+                return result;
+            }
+            else
+            {
+                var result = new ApiResponse<GetEmployeeDto>()
+                {
+                    Success = false,
+                    Message = "Employee Not Found"
+                };
+                return result;
+            }
         }
 
         [SwaggerOperation(Summary = "Get all employees")]
         [HttpGet("")]
         public async Task<ActionResult<ApiResponse<List<GetEmployeeDto>>>> GetAll()
         {
-            var employees = GetAllEmployees();
+            var employees = HelperFunctions.GetAllEmployees();
 
             if (employees != null)
             {
@@ -63,7 +88,7 @@ namespace Api.Controllers
         public async Task<ActionResult<ApiResponse<List<AddEmployeeDto>>>> AddEmployee(AddEmployeeDto newEmployee)
         {
             // Use a reusable helper method to get all employees
-            var employees = GetAllEmployees();
+            var employees = HelperFunctions.GetAllEmployees();
 
             if(employees != null)
             {
@@ -80,7 +105,7 @@ namespace Api.Controllers
 
                 employees.Add(newEmployeeRecord);
 
-                SerializeEmployeeCollection(employees);
+                HelperFunctions.SerializeEmployeeCollection(employees);
                 
                 var result = new ApiResponse<List<AddEmployeeDto>>
                 {
@@ -108,10 +133,10 @@ namespace Api.Controllers
         public async Task<ActionResult<ApiResponse<GetEmployeeDto>>> UpdateEmployee(int id, UpdateEmployeeDto updatedEmployee)
         {
             // Retrieve list of employees
-            var employees = GetAllEmployees();
+            var employees = HelperFunctions.GetAllEmployees();
 
             // Retrieve the matching record
-            GetEmployeeDto employeeAsDTO = GetEmployeeGivenId(id, employees);
+            GetEmployeeDto employeeAsDTO = HelperFunctions.GetEmployeeGivenId(id, employees);
 
             // If the matching record is not null, then we can update it.
             if(employeeAsDTO != null)
@@ -121,7 +146,7 @@ namespace Api.Controllers
                 employeeAsDTO.LastName = updatedEmployee.LastName;
                 employeeAsDTO.Salary = updatedEmployee.Salary;
 
-                SerializeEmployeeCollection(employees);
+                HelperFunctions.SerializeEmployeeCollection(employees);
 
                 var result = new ApiResponse<GetEmployeeDto>
                 {
@@ -147,8 +172,8 @@ namespace Api.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse<List<GetEmployeeDto>>>> DeleteEmployee(int id)
         {
-            var employees = GetAllEmployees();
-            var targetEmployee = GetEmployeeGivenId(id, employees);
+            var employees = HelperFunctions.GetAllEmployees();
+            var targetEmployee = HelperFunctions.GetEmployeeGivenId(id, employees);
             employees.Remove(targetEmployee);
 
             // Update IDs beyond this one
@@ -161,7 +186,7 @@ namespace Api.Controllers
                 employeeDTO.Id -= 1;
             }
 
-            SerializeEmployeeCollection(employees);
+            HelperFunctions.SerializeEmployeeCollection(employees);
 
             var result = new ApiResponse<List<GetEmployeeDto>>
             {
@@ -170,50 +195,6 @@ namespace Api.Controllers
                 Success = true
             };
             return result;
-        }
-
-        private List<GetEmployeeDto> GetAllEmployees()
-        {
-            // Employees will go into a list of GetEmployeeDTOs
-            var employees = new List<GetEmployeeDto>();
-
-            // Use a StreamReader to read the json out of EmployeeData.json
-            using (StreamReader r = new StreamReader(jsonFilePath))
-            {
-                string json = r.ReadToEnd();
-                employees = JsonSerializer.Deserialize<List<GetEmployeeDto>>(json);
-            }
-
-            // return the deserialized collection
-            // Don't bother checking for null, this will be handled by API methods and they may have different ways to handle it.
-            // Null just means the deserialization failed, likely due to bad JSON. This shouldn't happen, but it's good to note.
-            return employees;
-        }
-
-        private async void SerializeEmployeeCollection(List<GetEmployeeDto> employees)
-        {
-            var serializeOptions = new JsonSerializerOptions
-            {
-                WriteIndented = true
-            };
-            using FileStream createStream = System.IO.File.Create(jsonFilePath);
-            await JsonSerializer.SerializeAsync(createStream, employees, serializeOptions);
-            await createStream.DisposeAsync();
-
-        }
-
-        private GetEmployeeDto GetEmployeeGivenId(int id, List<GetEmployeeDto> employees)
-        {
-            // Use LINQ to quickly get the record that matches the id given
-            IEnumerable<GetEmployeeDto> employeeAsCollection =
-                from employeeObject in employees
-                where employeeObject.Id == id
-                select employeeObject;
-
-            // Retrieve the matching record
-            GetEmployeeDto employeeAsDTO = employeeAsCollection.FirstOrDefault();
-
-            return employeeAsDTO;
         }
     }
 }
