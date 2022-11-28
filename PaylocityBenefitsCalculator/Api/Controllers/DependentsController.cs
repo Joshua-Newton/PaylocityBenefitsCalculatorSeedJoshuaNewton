@@ -85,15 +85,27 @@ namespace Api.Controllers
                 newDependentDto.DateOfBirth = newDependent.DateOfBirth;
                 // TODO: Check to make sure there isn't already a spouse/domestic partner if the new dependent has one of these relations
                 newDependentDto.Relationship = newDependent.Relationship;
-                targetEmployee.Dependents.Add(newDependentDto);
+                if (targetEmployee != null)
+                {
+                    targetEmployee.Dependents.Add(newDependentDto);
+                }
+                else
+                {
+                    var resultingResponse = new ApiResponse<List<AddDependentWithEmployeeIdDto>>()
+                    {
+                        Success = false,
+                        Message = "Target Employee does not exist"
+                    };
+                    return resultingResponse;
+                }
                 HelperFunctions.SerializeEmployeeCollection(employees);
                 var result = new ApiResponse<List<AddDependentWithEmployeeIdDto>>()
                 {
                     Data = new List<AddDependentWithEmployeeIdDto> {
                         newDependent
                     },
-                    Success = false,
-                    Message = "No Employees to add dependent to"
+                    Success = true,
+                    Message = "Dependent Added"
                 };
                 return result;
             }
