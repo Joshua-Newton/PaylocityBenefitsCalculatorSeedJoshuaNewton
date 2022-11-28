@@ -77,37 +77,54 @@ namespace Api.Controllers
                     where employeeObject.Id == newDependent.EmployeeId
                     select employeeObject;
                 GetEmployeeDto targetEmployee = targetEmployeeAsCollection.FirstOrDefault();
-                // Add dependent to the target Employee
-                GetDependentDto newDependentDto = new GetDependentDto();
-                newDependentDto.Id = allDependents.Count + 1;
-                newDependentDto.FirstName = newDependent.FirstName;
-                newDependentDto.LastName = newDependent.LastName;
-                newDependentDto.DateOfBirth = newDependent.DateOfBirth;
-                // TODO: Check to make sure there isn't already a spouse/domestic partner if the new dependent has one of these relations
-                newDependentDto.Relationship = newDependent.Relationship;
-                if (targetEmployee != null)
+                bool validRelationship = true;
+                if(newDependent.Relationship == Relationship.Spouse || newDependent.Relationship == Relationship.DomesticPartner)
                 {
-                    targetEmployee.Dependents.Add(newDependentDto);
+                    validRelationship = !HelperFunctions.CheckIfSpouseOrPartnerExists(targetEmployee);
+                }
+                if(validRelationship)
+                {
+                    // Add dependent to the target Employee
+                    GetDependentDto newDependentDto = new GetDependentDto();
+                    newDependentDto.Id = allDependents.Count + 1;
+                    newDependentDto.FirstName = newDependent.FirstName;
+                    newDependentDto.LastName = newDependent.LastName;
+                    newDependentDto.DateOfBirth = newDependent.DateOfBirth;
+                    newDependentDto.Relationship = newDependent.Relationship;
+                
+                    if (targetEmployee != null)
+                    {
+                        targetEmployee.Dependents.Add(newDependentDto);
+                    }
+                    else
+                    {
+                        var resultingResponse = new ApiResponse<List<AddDependentWithEmployeeIdDto>>()
+                        {
+                            Success = false,
+                            Message = "Target Employee does not exist"
+                        };
+                        return resultingResponse;
+                    }
+                    HelperFunctions.SerializeEmployeeCollection(employees);
+                    var result = new ApiResponse<List<AddDependentWithEmployeeIdDto>>()
+                    {
+                        Data = new List<AddDependentWithEmployeeIdDto> {
+                            newDependent
+                        },
+                        Success = true,
+                        Message = "Dependent Added"
+                    };
+                    return result;
                 }
                 else
                 {
-                    var resultingResponse = new ApiResponse<List<AddDependentWithEmployeeIdDto>>()
+                    var result = new ApiResponse<List<AddDependentWithEmployeeIdDto>>()
                     {
                         Success = false,
-                        Message = "Target Employee does not exist"
+                        Message = "Employee already has a Spouse/DomesticPartner. Cannot add a second."
                     };
-                    return resultingResponse;
+                    return result;
                 }
-                HelperFunctions.SerializeEmployeeCollection(employees);
-                var result = new ApiResponse<List<AddDependentWithEmployeeIdDto>>()
-                {
-                    Data = new List<AddDependentWithEmployeeIdDto> {
-                        newDependent
-                    },
-                    Success = true,
-                    Message = "Dependent Added"
-                };
-                return result;
             }
             else
             {
@@ -126,30 +143,46 @@ namespace Api.Controllers
         {
             var employees = HelperFunctions.GetAllEmployees();
             var dependent = HelperFunctions.GetDependentGivenId(id, employees);
-
-            if(dependent != null)
+            var targetEmployee = HelperFunctions.GetEmployeeDtoContainingDependentId(id, employees);
+            bool validRelationship = true;
+            if (updatedDependent.Relationship == Relationship.Spouse || updatedDependent.Relationship == Relationship.DomesticPartner)
             {
-                dependent.FirstName = updatedDependent.FirstName;
-                dependent.LastName = updatedDependent.LastName;
-                dependent.DateOfBirth = updatedDependent.DateOfBirth;
-                // TODO: Check relationship to make sure that it's not a duplicate spouse/domestic partner.
-                dependent.Relationship= updatedDependent.Relationship;
-
-                HelperFunctions.SerializeEmployeeCollection(employees);
-                var result = new ApiResponse<GetDependentDto>
+                validRelationship = !HelperFunctions.CheckIfSpouseOrPartnerExistsExcludingId(targetEmployee, id);
+            }
+            if(validRelationship)
+            {
+                if (dependent != null)
                 {
-                    Data = dependent,
-                    Message = "Dependent Updated",
-                    Success = true
-                };
-                return result;
+                    dependent.FirstName = updatedDependent.FirstName;
+                    dependent.LastName = updatedDependent.LastName;
+                    dependent.DateOfBirth = updatedDependent.DateOfBirth;
+                    dependent.Relationship= updatedDependent.Relationship;
+
+                    HelperFunctions.SerializeEmployeeCollection(employees);
+                    var result = new ApiResponse<GetDependentDto>
+                    {
+                        Data = dependent,
+                        Message = "Dependent Updated",
+                        Success = true
+                    };
+                    return result;
+                }
+                else
+                // If the matching record is null, then it does not exist.
+                {
+                    var result = new ApiResponse<GetDependentDto>
+                    {
+                        Message = "Dependent of given id does not exist",
+                        Success = false
+                    };
+                    return result;
+                }
             }
             else
-            // If the matching record is null, then it does not exist.
             {
                 var result = new ApiResponse<GetDependentDto>
                 {
-                    Message = "Dependent of given id does not exist",
+                    Message = "Target Employee already has a Spouse/DomesticPartner. Dependent Not Updated.",
                     Success = false
                 };
                 return result;
@@ -161,7 +194,42 @@ namespace Api.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse<List<GetDependentDto>>>> DeleteDependent(int id)
         {
-            throw new NotImplementedException();
+            var employees = HelperFunctions.GetAllEmployees();
+            var targetDependent = HelperFunctions.GetDependentGivenId(id, employees);
+            if(targetDependent != null)
+            {
+                // If the dependent exists it must have an associated employee, so no need to check null on targetEmployee
+                var targetEmployee = HelperFunctions.GetEmployeeDtoContainingDependentId(id, employees);
+                targetEmployee.Dependents.Remove(targetDependent);
+                
+                // Update IDs beyond this one
+                IEnumerable<GetDependentDto> dependentsAsCollection =
+                    from dependentObject in HelperFunctions.GetAllDependents(employees)
+                    where dependentObject.Id > id
+                    select dependentObject;
+                foreach (GetDependentDto dependentDTO in dependentsAsCollection)
+                {
+                    dependentDTO.Id -= 1;
+                }
+
+                HelperFunctions.SerializeEmployeeCollection(employees);
+                var result = new ApiResponse<List<GetDependentDto>>
+                {
+                    Data = targetEmployee.Dependents.ToList(),
+                    Message = "Dependent Deleted",
+                    Success = false
+                };
+                return result;
+            }
+            else
+            {
+                var result = new ApiResponse<List<GetDependentDto>>
+                {
+                    Message = "Dependent of given id does not exist",
+                    Success = false
+                };
+                return result;
+            }
         }
     }
 }

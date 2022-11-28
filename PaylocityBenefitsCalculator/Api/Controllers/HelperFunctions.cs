@@ -103,5 +103,39 @@ namespace Api.Controllers
             }
             return null;
         }
-    }
+
+        public static GetEmployeeDto GetEmployeeDtoContainingDependentId(int id, List<GetEmployeeDto> employees)
+        {
+            IEnumerable<GetEmployeeDto> targetEmployee =
+                from employeeObject in employees
+                from dependentObject in employeeObject.Dependents
+                where dependentObject.Id == id
+                select employeeObject;
+            return targetEmployee.FirstOrDefault();
+        }
+
+        public static bool CheckIfSpouseOrPartnerExists(GetEmployeeDto employee)
+        {
+            foreach(GetDependentDto dependent in employee.Dependents)
+            {
+                if(dependent.Relationship == Relationship.DomesticPartner || dependent.Relationship == Relationship.Spouse)
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool CheckIfSpouseOrPartnerExistsExcludingId(GetEmployeeDto employee, int id)
+        {
+            foreach (GetDependentDto dependent in employee.Dependents)
+            {
+                if (dependent.Id != id && (dependent.Relationship == Relationship.DomesticPartner || dependent.Relationship == Relationship.Spouse))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+    } 
 }
