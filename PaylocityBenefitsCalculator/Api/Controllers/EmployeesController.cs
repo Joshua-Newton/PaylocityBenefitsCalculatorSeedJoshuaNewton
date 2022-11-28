@@ -5,6 +5,11 @@ using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Linq;
+using System.IO;
+using System.Text;
+using System;
+using System.IO.Compression;
 
 namespace Api.Controllers
 {
@@ -26,15 +31,9 @@ namespace Api.Controllers
         [HttpGet("")]
         public async Task<ActionResult<ApiResponse<List<GetEmployeeDto>>>> GetAll()
         {
-            var employees = new List<GetEmployeeDto>();
+            var employees = getAllEmployees();
 
-            using (StreamReader r = new StreamReader(jsonFilePath))
-            {
-                string json = r.ReadToEnd();
-                employees = JsonSerializer.Deserialize<List<GetEmployeeDto>>(json);
-            }
-
-            if (employees != null && employees.Count > 0)
+            if (employees != null)
             {
                 if(employees.Count > 0)
                 {
@@ -70,19 +69,54 @@ namespace Api.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<List<AddEmployeeDto>>>> AddEmployee(AddEmployeeDto newEmployee)
         {
-            var employeesList = new List<AddEmployeeDto>();
-            employeesList.Add(newEmployee);
+            // Use a reusable helper method to get all employees
+            var employees = getAllEmployees();
 
-            // Store employee?
-
-            var result = new ApiResponse<List<AddEmployeeDto>>
+            if(employees != null)
             {
-                Data = employeesList,
-                Success = true
-            };
 
-            return result;
-            //throw new NotImplementedException();
+                var newEmployeeRecord = new GetEmployeeDto()
+                {
+                    Id = employees.Count + 1,
+                    FirstName = newEmployee.FirstName,
+                    LastName = newEmployee.LastName,
+                    Salary = newEmployee.Salary,
+                    DateOfBirth = newEmployee.DateOfBirth,
+                    Dependents = newEmployee.Dependents as ICollection<GetDependentDto>
+                };
+
+                employees.Add(newEmployeeRecord);
+
+                var serializeOptions = new JsonSerializerOptions
+                {
+                    WriteIndented = true,
+//                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+                };
+                //var jsonString = JsonSerializer.Serialize(employees, serializeOptions);
+
+                using FileStream createStream = System.IO.File.Create(jsonFilePath);
+                await JsonSerializer.SerializeAsync(createStream, employees, serializeOptions);
+                await createStream.DisposeAsync();
+
+                var result = new ApiResponse<List<AddEmployeeDto>>
+                {
+                    Data = new List<AddEmployeeDto>
+                    {
+                        newEmployee
+                    },
+                    Success = true
+                };
+                return result;
+            }
+            else
+            {
+                var result = new ApiResponse<List<AddEmployeeDto>>()
+                {
+                    Success = false,
+                    Message = "Employee JSON Parse failed"
+                };
+                return result;
+            }
         }
 
         [SwaggerOperation(Summary = "Update employee")]
@@ -97,6 +131,24 @@ namespace Api.Controllers
         public async Task<ActionResult<ApiResponse<List<GetEmployeeDto>>>> DeleteEmployee(int id)
         {
             throw new NotImplementedException();
+        }
+
+        private List<GetEmployeeDto> getAllEmployees()
+        {
+            // Employees will go into a list of GetEmployeeDTOs
+            var employees = new List<GetEmployeeDto>();
+
+            // Use a StreamReader to read the json out of EmployeeData.json
+            using (StreamReader r = new StreamReader(jsonFilePath))
+            {
+                string json = r.ReadToEnd();
+                employees = JsonSerializer.Deserialize<List<GetEmployeeDto>>(json);
+            }
+
+            // return the deserialized collection
+            // Don't bother checking for null, this will be handled by API methods and they may have different ways to handle it.
+            // Null just means the deserialization failed, likely due to bad JSON. This shouldn't happen, but it's good to note.
+            return employees;
         }
     }
 }

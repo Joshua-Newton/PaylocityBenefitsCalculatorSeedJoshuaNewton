@@ -3,20 +3,34 @@ import { baseUrl } from "./Constants";
 
 const AddEmployeeModal = (props) => {
 
-    const [ID, setID] = useState('')
-
-    const handleChange = event => {
-        setID(event.target.value);
+    // Fields for Employee values. Exclude ID as api handles assigning this value.
+    const [firstName, setFirstName] = useState('')
+    const [lastName, setLastName] = useState('')
+    const [dateOfBirth, setDateOfBirth] = useState('')
+    const [salary, setSalary] = useState('')
+    
+    const handleFirstNameChange = event => {
+        setFirstName(event.target.value);
+    }
+    const handleLastNameChange = event => {
+        setLastName(event.target.value);
+    }
+    const handleDateOfBirthChange = event => {
+        setDateOfBirth(event.target.value);
+    }
+    const handleSalaryChange = event => {
+        setSalary(event.target.value);
     }
     
+    
+
     const SubmitEmployee = async () => {
         const employeeData = {
-            id: ID,
-            firstName: "FirstName",
-            lastName: "LastName",
-            dateOfBirth: new Date(2020,0,12),
-            salary: "80000",
-            dependents: []
+            FirstName: firstName,
+            LastName: lastName,
+            DateOfBirth: dateOfBirth,
+            Salary: salary,
+            Dependents: []
         }
     
         const result = await fetch(`${baseUrl}/api/v1/Employees/`, {
@@ -42,55 +56,43 @@ const AddEmployeeModal = (props) => {
                     </div>
                     <div className="modal-body">
                         <div className="row">
-                            <div className="col-3">
-                                <label>ID</label>
-                            </div>
-                            <div className="col-9">
-                                <input id="idInput" type={"text"} onChange={handleChange}></input>
-                            </div>
-                        </div>
-                        <div className="row">
-                            <div className="col">
+                            <div className="col-6">
                                 <label>LastName</label>
                             </div>
-                            <div className="col-9">
-                                <input id="idLastName" type={"text"}></input>
+                            <div className="col-6">
+                                <input id="idLastName" type={"text"} onChange={handleLastNameChange}></input>
                             </div>
                         </div>
                         <div className="row">
-                            <div className="col">
+                            <div className="col-6">
                                 <label>FirstName</label>
                             </div>
-                            <div className="col-9">
-                                <input id="idFirstName" type={"text"}></input>
+                            <div className="col-6">
+                                <input id="idFirstName" type={"text"} onChange={handleFirstNameChange}></input>
                             </div>
                         </div>
                         <div className="row">
-                            <div className="col">
+                            <div className="col-6">
                                 <label>DOB</label>
                             </div>
-                            <div className="col-9">
-                                <input id="idDOB" type={"date"}></input>
+                            <div className="col-6">
+                                <input id="idDOB" type={"date"} onChange={handleDateOfBirthChange}></input>
                             </div>
                         </div>
                         <div className="row">
-                            <div className="col">
+                            <div className="col-6">
                                 <label>Salary</label>
                             </div>
-                            <div className="col-9">
-                                <input id="idSalary" type={"number"}></input>
+                            <div className="col-6">
+                                <input id="idSalary" type={"number"} onChange={handleSalaryChange}></input>
                             </div>
                         </div>
                         <div className="row">
-                            <div className="col">
-                                <label>Dependents</label>
+                            <div className="col-6">
+                                <label>Number of Dependents</label>
                             </div>
-                            <div className="col-9">
-                                <input id="idDependents" list="dependentsList"></input>
-                                <datalist id="dependentsList">
-                                    <option value="dependent1"></option>
-                                    <option value="dependent2"></option>
-                                </datalist>
+                            <div className="col-6">
+                                <input id="numDependents"></input>
                             </div>
                         </div>
                     </div>
