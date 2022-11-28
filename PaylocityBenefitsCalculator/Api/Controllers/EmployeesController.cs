@@ -4,12 +4,6 @@ using Api.Models;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
 using System.Text.Json;
-using System.Text.Json.Nodes;
-using System.Linq;
-using System.IO;
-using System.Text;
-using System;
-using System.IO.Compression;
 
 namespace Api.Controllers
 {
@@ -87,17 +81,8 @@ namespace Api.Controllers
 
                 employees.Add(newEmployeeRecord);
 
-                var serializeOptions = new JsonSerializerOptions
-                {
-                    WriteIndented = true,
-//                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
-                };
-                //var jsonString = JsonSerializer.Serialize(employees, serializeOptions);
-
-                using FileStream createStream = System.IO.File.Create(jsonFilePath);
-                await JsonSerializer.SerializeAsync(createStream, employees, serializeOptions);
-                await createStream.DisposeAsync();
-
+                serializeEmployeeCollection(employees);
+                
                 var result = new ApiResponse<List<AddEmployeeDto>>
                 {
                     Data = new List<AddEmployeeDto>
@@ -123,7 +108,46 @@ namespace Api.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<GetEmployeeDto>>> UpdateEmployee(int id, UpdateEmployeeDto updatedEmployee)
         {
-            throw new NotImplementedException();
+            // Retrieve list of employees
+            var employees = getAllEmployees();
+
+            // Use LINQ to quickly get the record that matches the id given
+            IEnumerable<GetEmployeeDto> employeeAsCollection =
+                from employeeObject in employees
+                where employeeObject.Id == id
+                select employeeObject;
+
+            // Retrieve the matching record
+            GetEmployeeDto employeeAsDTO = employeeAsCollection.FirstOrDefault();
+
+            // If the matching record is not null, then we can update it.
+            if(employeeAsDTO != null)
+            {
+                // Update the record
+                employeeAsDTO.FirstName = updatedEmployee.FirstName;
+                employeeAsDTO.LastName = updatedEmployee.LastName;
+                employeeAsDTO.Salary = updatedEmployee.Salary;
+
+                serializeEmployeeCollection(employees);
+
+                var result = new ApiResponse<GetEmployeeDto>
+                {
+                    Data = employeeAsDTO,
+                    Message = "Employee Updated",
+                    Success = true
+                };
+                return result;
+            }
+            // If the matching record is null, then it does not exist.
+            else
+            {
+                var result = new ApiResponse<GetEmployeeDto>
+                {
+                    Message = "Employee of given id does not exist",
+                    Success = false
+                };
+                return result;
+            }
         }
 
         [SwaggerOperation(Summary = "Delete employee")]
@@ -149,6 +173,18 @@ namespace Api.Controllers
             // Don't bother checking for null, this will be handled by API methods and they may have different ways to handle it.
             // Null just means the deserialization failed, likely due to bad JSON. This shouldn't happen, but it's good to note.
             return employees;
+        }
+
+        private async void serializeEmployeeCollection(List<GetEmployeeDto> employees)
+        {
+            var serializeOptions = new JsonSerializerOptions
+            {
+                WriteIndented = true
+            };
+            using FileStream createStream = System.IO.File.Create(jsonFilePath);
+            await JsonSerializer.SerializeAsync(createStream, employees, serializeOptions);
+            await createStream.DisposeAsync();
+
         }
     }
 }
