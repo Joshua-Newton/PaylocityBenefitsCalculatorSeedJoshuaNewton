@@ -1,4 +1,6 @@
-﻿using Api.Dtos.Employee;
+﻿using Api.Dtos.Dependent;
+using Api.Dtos.Employee;
+using Api.Models;
 using System.Text.Json;
 
 namespace Api.Controllers
@@ -36,7 +38,6 @@ namespace Api.Controllers
             using FileStream createStream = System.IO.File.Create(jsonFilePath);
             await JsonSerializer.SerializeAsync(createStream, employees, serializeOptions);
             await createStream.DisposeAsync();
-
         }
 
         public static GetEmployeeDto GetEmployeeGivenId(int id, List<GetEmployeeDto> employees)
@@ -51,6 +52,56 @@ namespace Api.Controllers
             GetEmployeeDto employeeAsDTO = employeeAsCollection.FirstOrDefault();
 
             return employeeAsDTO;
+        }
+
+        public static GetDependentDto GetDependentGivenId(int id, List<GetEmployeeDto> employees)
+        {
+            IEnumerable<GetDependentDto> dependentAsCollection =
+                from employeeObject in employees
+                from dependentObject in employeeObject.Dependents
+                where dependentObject.Id == id
+                select dependentObject;
+            if(dependentAsCollection != null)
+            {
+                GetDependentDto targetDependent = dependentAsCollection.FirstOrDefault();
+                return targetDependent;
+            }
+            return null;
+
+        }
+
+        public static List<GetDependentDto> GetAllDependents(List<GetEmployeeDto> employees) 
+        {
+            IEnumerable<GetDependentDto> dependentsAsCollection =
+                from employeeObject in employees
+                from dependentObject in employeeObject.Dependents
+                select dependentObject;
+            if(dependentsAsCollection != null)
+            {
+                // For some reason this:
+                // dependentsAsCollection.ToList()
+                // Is causing a null reference exception.
+                // Working around with loops
+                List<GetDependentDto> listOfDependents = new List<GetDependentDto>();
+                bool endFound = false;
+                int index = 0;
+                while(!endFound)
+                {
+                    // This isn't a very good way to do this.... but ToList() failing is forcing my hand.
+                    // TODO: Try to find a better way after the rest of the project is done.
+                    try {
+                        listOfDependents.Add(dependentsAsCollection.ElementAt<GetDependentDto>(index));
+                        index++;
+                    }
+                    catch (Exception ex)
+                    {
+                        endFound = true;
+                        continue;
+                    }
+                }
+                return listOfDependents;
+            }
+            return null;
         }
     }
 }
