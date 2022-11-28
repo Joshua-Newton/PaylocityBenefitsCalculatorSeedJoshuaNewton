@@ -124,7 +124,37 @@ namespace Api.Controllers
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<GetDependentDto>>> UpdateDependent(int id, UpdateDependentDto updatedDependent)
         {
-            throw new NotImplementedException();
+            var employees = HelperFunctions.GetAllEmployees();
+            var dependent = HelperFunctions.GetDependentGivenId(id, employees);
+
+            if(dependent != null)
+            {
+                dependent.FirstName = updatedDependent.FirstName;
+                dependent.LastName = updatedDependent.LastName;
+                dependent.DateOfBirth = updatedDependent.DateOfBirth;
+                // TODO: Check relationship to make sure that it's not a duplicate spouse/domestic partner.
+                dependent.Relationship= updatedDependent.Relationship;
+
+                HelperFunctions.SerializeEmployeeCollection(employees);
+                var result = new ApiResponse<GetDependentDto>
+                {
+                    Data = dependent,
+                    Message = "Dependent Updated",
+                    Success = true
+                };
+                return result;
+            }
+            else
+            // If the matching record is null, then it does not exist.
+            {
+                var result = new ApiResponse<GetDependentDto>
+                {
+                    Message = "Dependent of given id does not exist",
+                    Success = false
+                };
+                return result;
+            }
+
         }
 
         [SwaggerOperation(Summary = "Delete dependent")]
