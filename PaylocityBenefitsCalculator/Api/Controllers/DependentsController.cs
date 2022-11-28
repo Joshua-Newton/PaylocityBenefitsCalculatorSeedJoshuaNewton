@@ -67,7 +67,45 @@ namespace Api.Controllers
         [HttpPost]
         public async Task<ActionResult<ApiResponse<List<AddDependentWithEmployeeIdDto>>>> AddDependent(AddDependentWithEmployeeIdDto newDependent)
         {
-            throw new NotImplementedException();
+            var employees = HelperFunctions.GetAllEmployees();
+            if(employees != null)
+            {
+                var allDependents = HelperFunctions.GetAllDependents(employees);
+                
+                IEnumerable<GetEmployeeDto> targetEmployeeAsCollection =
+                    from employeeObject in employees
+                    where employeeObject.Id == newDependent.EmployeeId
+                    select employeeObject;
+                GetEmployeeDto targetEmployee = targetEmployeeAsCollection.FirstOrDefault();
+                // Add dependent to the target Employee
+                GetDependentDto newDependentDto = new GetDependentDto();
+                newDependentDto.Id = allDependents.Count + 1;
+                newDependentDto.FirstName = newDependent.FirstName;
+                newDependentDto.LastName = newDependent.LastName;
+                newDependentDto.DateOfBirth = newDependent.DateOfBirth;
+                // TODO: Check to make sure there isn't already a spouse/domestic partner if the new dependent has one of these relations
+                newDependentDto.Relationship = newDependent.Relationship;
+                targetEmployee.Dependents.Add(newDependentDto);
+                HelperFunctions.SerializeEmployeeCollection(employees);
+                var result = new ApiResponse<List<AddDependentWithEmployeeIdDto>>()
+                {
+                    Data = new List<AddDependentWithEmployeeIdDto> {
+                        newDependent
+                    },
+                    Success = false,
+                    Message = "No Employees to add dependent to"
+                };
+                return result;
+            }
+            else
+            {
+                var result = new ApiResponse<List<AddDependentWithEmployeeIdDto>>()
+                {
+                    Success = false,
+                    Message = "No Employees to add dependent to"
+                };
+                return result;
+            }
         }
 
         [SwaggerOperation(Summary = "Update dependent")]
