@@ -24,7 +24,7 @@ namespace Api.Controllers
         [HttpGet("")]
         public async Task<ActionResult<ApiResponse<List<GetEmployeeDto>>>> GetAll()
         {
-            var employees = getAllEmployees();
+            var employees = GetAllEmployees();
 
             if (employees != null)
             {
@@ -63,7 +63,7 @@ namespace Api.Controllers
         public async Task<ActionResult<ApiResponse<List<AddEmployeeDto>>>> AddEmployee(AddEmployeeDto newEmployee)
         {
             // Use a reusable helper method to get all employees
-            var employees = getAllEmployees();
+            var employees = GetAllEmployees();
 
             if(employees != null)
             {
@@ -108,7 +108,7 @@ namespace Api.Controllers
         public async Task<ActionResult<ApiResponse<GetEmployeeDto>>> UpdateEmployee(int id, UpdateEmployeeDto updatedEmployee)
         {
             // Retrieve list of employees
-            var employees = getAllEmployees();
+            var employees = GetAllEmployees();
 
             // Retrieve the matching record
             GetEmployeeDto employeeAsDTO = GetEmployeeGivenId(id, employees);
@@ -147,7 +147,7 @@ namespace Api.Controllers
         [HttpDelete("{id}")]
         public async Task<ActionResult<ApiResponse<List<GetEmployeeDto>>>> DeleteEmployee(int id)
         {
-            var employees = getAllEmployees();
+            var employees = GetAllEmployees();
             var targetEmployee = GetEmployeeGivenId(id, employees);
             employees.Remove(targetEmployee);
 
@@ -172,7 +172,7 @@ namespace Api.Controllers
             return result;
         }
 
-        private List<GetEmployeeDto> getAllEmployees()
+        private List<GetEmployeeDto> GetAllEmployees()
         {
             // Employees will go into a list of GetEmployeeDTOs
             var employees = new List<GetEmployeeDto>();
