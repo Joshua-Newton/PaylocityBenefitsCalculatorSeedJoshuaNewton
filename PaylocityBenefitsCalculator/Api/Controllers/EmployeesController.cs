@@ -130,17 +130,7 @@ namespace Api.Controllers
                 if (newEmployee.Dependents != null && newEmployee.Dependents.Count > 0)
                 {
                     // Get the number of dependents. This will determine IDs of new dependents.
-                    int numDependents = 0;
-                    foreach (var employee in employees)
-                    {
-                        if (employee.Dependents != null)
-                        {
-                            foreach (var dependent in employee.Dependents)
-                            {
-                                numDependents++;
-                            }
-                        }
-                    }
+                    int numDependents = HelperFunctions.GetAllDependents(employees).Count();
                     
                     bool spouseOrDomesticPartnerAdded = false;
                     foreach(var dependent in newEmployee.Dependents)
@@ -226,6 +216,8 @@ namespace Api.Controllers
             }
         }
 
+
+
         [SwaggerOperation(Summary = "Update employee")]
         [HttpPut("{id}")]
         public async Task<ActionResult<ApiResponse<GetEmployeeDto>>> UpdateEmployee(int id, UpdateEmployeeDto updatedEmployee)
@@ -264,6 +256,155 @@ namespace Api.Controllers
                 };
                 return result;
             }
+        }
+
+
+        [SwaggerOperation(Summary = "Update employee and dependents of employee by id")]
+        [HttpPut("UpdateDependents/{id}")]
+        public async Task<ActionResult<ApiResponse<GetEmployeeDto>>> UpdateEmployeeAndDependents(int id, GetEmployeeDto updatedEmployeeWithDependents)
+        {
+            var employees = HelperFunctions.GetAllEmployees();
+            var originalEmployee = HelperFunctions.GetEmployeeGivenId(id, employees);
+
+            // Date of Birth should never change, don't update it
+            originalEmployee.FirstName = updatedEmployeeWithDependents.FirstName;
+            originalEmployee.LastName = updatedEmployeeWithDependents.LastName;
+            originalEmployee.Salary = updatedEmployeeWithDependents.Salary;
+
+            // When deleting, will need to keep track of which IDs were deleted. Don't want to update IDs until all records are updated.
+            List<int> deletedIds = new List<int>();
+
+            // If the employee had dependents, it's possible that they need to be updated
+            if(originalEmployee.Dependents != null && originalEmployee.Dependents.Count > 0)
+            {
+                // Get number of dependents in case new ones need to be added
+                var numDependents = HelperFunctions.GetAllDependents(employees).Count();
+                // first, delete any dependents that are in the original, but don't have a matching id in the updated
+                foreach(var originalDependent in originalEmployee.Dependents)
+                {
+                    bool matchFound = false;
+                    // Searching for a matching id. If one is found, record was not deleted.
+                    // If one is not found, record was deleted
+                    foreach(var updatedDependent in updatedEmployeeWithDependents.Dependents)
+                    {
+                        if (updatedDependent.Id == originalDependent.Id)
+                        {
+                            matchFound = true;
+                            break;
+                        }
+                    }
+                    if (!matchFound)
+                    {
+                        // Can't delete here since we're looping through the collection
+                        deletedIds.Add(originalDependent.Id);
+                    }
+                }
+                
+                // Delete dependents
+                for(int i = 0; i < deletedIds.Count; i++)
+                {
+                    var targetForDeletion = HelperFunctions.GetDependentGivenId(deletedIds[i], employees);
+                    originalEmployee.Dependents.Remove(targetForDeletion);
+                }
+
+                // for every dependent given, either update them or add them.
+                foreach(var updatedDependent in updatedEmployeeWithDependents.Dependents)
+                {
+                    // if the updated record has an id, then it must have a matching record
+                    // The UI passes back ID of 0 as a flag to be a new dependent
+                    if(updatedDependent.Id > 0)
+                    {
+                        foreach(var original in originalEmployee.Dependents)
+                        {
+                            if(original.Id == updatedDependent.Id)
+                            {
+                                original.FirstName = updatedDependent.FirstName;
+                                original.LastName = updatedDependent.LastName;
+                                if(HelperFunctions.CheckIfSpouseOrPartnerExistsExcludingId(originalEmployee, updatedDependent.Id))
+                                {
+                                    var failedResult = new ApiResponse<GetEmployeeDto>
+                                    {
+                                        Message = "Can only have one spouse or domestic partner, trying to add more",
+                                        Error = "Only one spouse or partner allowed",
+                                        Success = false
+                                    };
+                                    return failedResult;
+                                }
+                                else
+                                {
+                                    original.Relationship = updatedDependent.Relationship;
+                                }
+                                break;
+                            }
+                            
+                        }
+                    }
+                    // Otherwise it's a new dependent that needs a new id
+                    else
+                    {
+                        numDependents++;
+                        updatedDependent.Id = numDependents;
+                        if(updatedDependent.Relationship == Relationship.Spouse || updatedDependent.Relationship == Relationship.DomesticPartner)
+                        {
+                            if (HelperFunctions.CheckIfSpouseOrPartnerExists(originalEmployee))
+                            {
+                                var failedResult = new ApiResponse<GetEmployeeDto>
+                                {
+                                    Message = "Can only have one spouse or domestic partner, trying to add more",
+                                    Error = "Only one spouse or partner allowed",
+                                    Success = false
+                                };
+                                return failedResult;
+                            }
+                        }
+                        originalEmployee.Dependents.Add(updatedDependent);
+                    }
+                }
+            }
+            // If they didn't, just accept the new ones, then assign IDs to them
+            else
+            {
+                var numDependents = HelperFunctions.GetAllDependents(employees).Count();
+                originalEmployee.Dependents = updatedEmployeeWithDependents.Dependents;
+                foreach(var dependent in originalEmployee.Dependents)
+                {
+                    numDependents++;
+                    dependent.Id = numDependents;
+                }
+            }
+
+            // Update Dependent Ids if neccessary
+            if(deletedIds.Count > 0)
+            {
+                // sort the ids and reverse to make sure we start with the highest one
+                deletedIds.Sort();
+                deletedIds.Reverse();
+
+                // for each one deleted, we need to lower the id of each dependent with a greater id by one.
+                for(int i = 0; i < deletedIds.Count; i++)
+                {
+                    // Update IDs beyond this one
+                    IEnumerable<GetDependentDto> dependentsAsCollection =
+                        from dependentObject in HelperFunctions.GetAllDependents(employees)
+                        where dependentObject.Id > deletedIds[i]
+                        select dependentObject;
+                    foreach (GetDependentDto dependentDto in dependentsAsCollection)
+                    {
+                        dependentDto.Id -= 1;
+                    }
+                }
+            }
+
+            // Save the new state
+            HelperFunctions.SerializeEmployeeCollection(employees);
+
+            var result = new ApiResponse<GetEmployeeDto>
+            {
+                Data = originalEmployee,
+                Message = "Employee And Dependents Updated",
+                Success = true
+            };
+            return result;
         }
 
         [SwaggerOperation(Summary = "Delete employee")]

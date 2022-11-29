@@ -11,13 +11,12 @@ const EmployeeListing = () => {
     const [currentEmployee, setCurrentEmployee] = useState([]);
     const [currentId, setCurrentId] = useState('');
     const [currentDependents, setCurrentDependents] = useState([]);
-    const [newEmploye, setNewEmployee] = useState('');
+    const [newEmployee, setNewEmployee] = useState('');
     // Fields for Employee values.
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [dateOfBirth, setDateOfBirth] = useState('');
     const [salary, setSalary] = useState('');
-    const [numDependents, setNumDependents] = useState('');
 
     const [dependentFields, setDependentFields] = useState([
         {id: '', lastName: '', firstName: '', dateOfBirth: '', relationship: ''}
@@ -48,11 +47,7 @@ const EmployeeListing = () => {
     const handleSalaryChange = event => {
         setSalary(event.target.value);
     }
-    const handleNumDependentsChange = event => {
-        setNumDependents(event.target.value);
-    }
 
-    // For new employee
     const SubmitEmployee = async () => {
         const employeeData = {
             FirstName: firstName,
@@ -61,21 +56,38 @@ const EmployeeListing = () => {
             Salary: salary,
             Dependents: dependentFields
         }
+        
+        // If this is a new employee, call POST
+        if(newEmployee) {
+            const result = await fetch(`${baseUrl}/api/v1/Employees/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type' : 'application/json'
+                },
+                body: JSON.stringify(employeeData),
+                type: 'json'
+            })
+        }
+        // If this is an existing employee being edited, call PUT
+        else {
+            const resultEmployeePut = await fetch(`${baseUrl}/api/v1/Employees/UpdateDependents/${currentEmployee.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type' : 'application/json'
+                },
+                body: JSON.stringify(employeeData),
+                type: 'json'
+            })
+            // Also need to update their dependents, add new ones, and delete old ones.
 
-        const result = await fetch(`${baseUrl}/api/v1/Employees/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type' : 'application/json'
-            },
-            body: JSON.stringify(employeeData),
-            type: 'json'
-        })
+        }
 
-        const resultInJSON = await result.json();
-        console.log(resultInJSON);
+        getEmployees();
     }
 
     async function setEmployee(employeeId){
+        
+
         const rawEmployee = await fetch(`${baseUrl}/api/v1/Employees/${employeeId}`, {
             method: 'GET',
             headers: {
@@ -86,10 +98,9 @@ const EmployeeListing = () => {
         const responseEmployee = await rawEmployee.json();
 
         if(responseEmployee.success){
+            setNewEmployee(false);
             setCurrentEmployee(responseEmployee.data);
             setCurrentId(responseEmployee.data.id);
-            // TODO: Dependent fields redundant?
-            setCurrentDependents(responseEmployee.data.dependents);
             setDependentFields(responseEmployee.data.dependents);
             
             setFirstName(responseEmployee.data.firstName);
@@ -102,10 +113,9 @@ const EmployeeListing = () => {
             salaryRef.current.value = responseEmployee.data.salary;
         }
         else {
+            setNewEmployee(true);
             setCurrentEmployee(null);
             setCurrentId(null);
-            // TODO: Dependent fields redundant?
-            setCurrentDependents(null);
             setDependentFields(null);
 
             setFirstName(null);
@@ -120,41 +130,31 @@ const EmployeeListing = () => {
         }
     }
 
-    useEffect(() => {
-        async function getEmployees() {
-            const raw = await fetch(`${baseUrl}/api/v1/Employees`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type' : 'application/json'
-                }
-            });
-            const response = await raw.json();
-            if (response.success) {
-                setEmployees(response.data);
-                setError(null);
+    const getEmployees = async () => {
+        const raw = await fetch(`${baseUrl}/api/v1/Employees`, {
+            method: 'GET',
+            headers: {
+                'Content-Type' : 'application/json'
             }
-            else {
-                setEmployees([]);
-                setError(response.error);
-            }
-        };
-        getEmployees();
-
-    }, []);
-
-    useEffect(() => {
-        console.log("Set Current Employee Ran: ")
-        if(currentEmployee){
-            console.log(currentEmployee);
+        });
+        const response = await raw.json();
+        if (response.success) {
+            setEmployees(response.data);
+            setError(null);
         }
         else {
-            console.log("current employee null");
+            setEmployees([]);
+            setError(response.error);
         }
-    }, [currentEmployee])
+    };
 
+    useEffect(() => {  
+        getEmployees();
+    }, []);
+
+    // Handler for when a dependent field changes
     const handleDependentFormChange = (index, event) => {
         let data = [...dependentFields];
-        
         if(event.target.name == "relationship"){
             switch(event.target.value){
                 case "spouse":
@@ -177,8 +177,9 @@ const EmployeeListing = () => {
         setDependentFields(data);
     }
 
+    // Function to add another dependent section in the employee modal
     const addFields = () => {
-        let newField = {id: '', lastName: '', firstName: '', dateOfBirth: '', relationship: ''}
+        let newField = {id: '0', lastName: '', firstName: '', dateOfBirth: '', relationship: ''}
         if(dependentFields){
             setDependentFields([...dependentFields, newField]);
         }
@@ -187,10 +188,8 @@ const EmployeeListing = () => {
         }
     }
 
+    // Function to remove a dependent section in the employee modal
     const removeDependent = (index) => {
-        console.log("Remove Dependent Called")
-        console.log("Index: " + index);
-        
         let data = [...dependentFields];
         data.splice(index, 1);
         setDependentFields(data);
@@ -226,6 +225,7 @@ const EmployeeListing = () => {
                     editModalId={addEmployeeModalId}
                     currentEmployee={currentEmployee}
                     setEmployee={setEmployee}
+                    getEmployees={getEmployees}
                 />
             ))}
             </tbody>
@@ -354,7 +354,7 @@ const EmployeeListing = () => {
                     <div className="modal-footer">
                         <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type='button' className='btn btn-secondary' onClick={addFields}>Add Dependent</button>
-                        <button type="button" className="btn btn-primary" onClick={SubmitEmployee}>Save changes</button>
+                        <button type="button" className="btn btn-primary" data-bs-dismiss="modal" onClick={SubmitEmployee}>Save changes</button>
                     </div>
                 </div>
             </div>

@@ -10,6 +10,7 @@ namespace Api.Controllers
     {
         private static string jsonFilePath = "EmployeeData.json";
 
+        // Return a list of all employees in the json file, including all their dependents.
         public static List<GetEmployeeDto> GetAllEmployees()
         {
             // Employees will go into a list of GetEmployeeDTOs
@@ -28,6 +29,7 @@ namespace Api.Controllers
             return employees;
         }
 
+        // Serializes an employee list to the json file. This is a pseudo-database that holds the employee list, which in turn holds dependents.
         public static async void SerializeEmployeeCollection(List<GetEmployeeDto> employees)
         {
             // Self explanatory. Serialize the collection into json to save it.
@@ -40,6 +42,7 @@ namespace Api.Controllers
             await createStream.DisposeAsync();
         }
 
+        // Returns a specific employee given an id and a list of employees.
         public static GetEmployeeDto GetEmployeeGivenId(int id, List<GetEmployeeDto> employees)
         {
             // Use LINQ to quickly get the record that matches the id given
@@ -54,8 +57,28 @@ namespace Api.Controllers
             return employeeAsDTO;
         }
 
-        public static GetDependentDto GetDependentGivenId(int id, List<GetEmployeeDto> employees)
+        // Returns a specific dependent given its id and the list of employees to search in.
+        public static GetDependentDto GetDependentGivenId(int dependentId, List<GetEmployeeDto> employees)
         {
+            // This is not a good approach, it's a brute force approach, would much rather use LINQ, but this will work until I figure out what's going on with LINQ errors
+            foreach(GetEmployeeDto employee in employees) 
+            { 
+                if(employee.Dependents != null && employee.Dependents.Count() > 0)
+                {
+                    foreach(GetDependentDto dependent in employee.Dependents)
+                    {
+                        if(dependent.Id == dependentId)
+                        {
+                            return dependent;
+                        }
+                    }
+                }
+            }
+            return null;
+
+            // Having issue where dependentAsCollection.FirstOrDefault is throwing null reference exception even when the dependent does exist....
+            // Going to implement a different solution to get around this.
+            /*
             IEnumerable<GetDependentDto> dependentAsCollection =
                 from employeeObject in employees
                 from dependentObject in employeeObject.Dependents
@@ -67,9 +90,10 @@ namespace Api.Controllers
                 return targetDependent;
             }
             return null;
-
+            */
         }
 
+        // Returns a list of all existing dependents for all employees.
         public static List<GetDependentDto> GetAllDependents(List<GetEmployeeDto> employees) 
         {
             // Non Linq method:
@@ -128,16 +152,19 @@ namespace Api.Controllers
             */
         }
 
-        public static GetEmployeeDto GetEmployeeDtoContainingDependentId(int id, List<GetEmployeeDto> employees)
+        // Returns the employee object that contains the given dependentId in their dependents list
+        public static GetEmployeeDto GetEmployeeDtoContainingDependentId(int dependentId, List<GetEmployeeDto> employees)
         {
             IEnumerable<GetEmployeeDto> targetEmployee =
                 from employeeObject in employees
                 from dependentObject in employeeObject.Dependents
-                where dependentObject.Id == id
+                where dependentObject.Id == dependentId
                 select employeeObject;
             return targetEmployee.FirstOrDefault();
         }
 
+        // returns true if a spouse or partner is in the given employee's dependents list.
+        // returns false if a spouse or partner is not in the dependents list.
         public static bool CheckIfSpouseOrPartnerExists(GetEmployeeDto employee)
         {
             foreach(GetDependentDto dependent in employee.Dependents)
@@ -150,11 +177,13 @@ namespace Api.Controllers
             return false;
         }
 
-        public static bool CheckIfSpouseOrPartnerExistsExcludingId(GetEmployeeDto employee, int id)
+        // returns true if the spouse or partner exists in the given employee's dependents list, but skips the given dependent id.
+        // returns false if the spouse or partner doesn't exist or the given ID is the only spouse or partner.
+        public static bool CheckIfSpouseOrPartnerExistsExcludingId(GetEmployeeDto employee, int dependentId)
         {
             foreach (GetDependentDto dependent in employee.Dependents)
             {
-                if (dependent.Id != id && (dependent.Relationship == Relationship.DomesticPartner || dependent.Relationship == Relationship.Spouse))
+                if (dependent.Id != dependentId && (dependent.Relationship == Relationship.DomesticPartner || dependent.Relationship == Relationship.Spouse))
                 {
                     return true;
                 }

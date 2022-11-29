@@ -13,6 +13,8 @@ const Employee = (props) => {
             },
             type: 'json'
         })
+
+        props.getEmployees();
     }
 
     return (
@@ -24,8 +26,9 @@ const Employee = (props) => {
             <td>{currencyFormat(salary)}</td>
             <td>{props.dependents?.length || 0}</td>
             <td>
-                <a href="#" onClick={() => props.setEmployee(props.id)}data-bs-toggle="modal" data-bs-target={`#${props.editModalId}`}>Edit</a>  
-                <a href="#" onClick={() => DeleteEmployee(props.id)}>Delete</a>
+                <button className={"btn btn-secondary"} onClick={() => props.setEmployee(props.id)}data-bs-toggle="modal" data-bs-target={`#${props.editModalId}`}>Edit</button>  
+                <button className={"btn btn-secondary"}  onClick={() => DeleteEmployee(props.id)}>Delete</button>
+                <button className={"btn btn-secondary"} >Calclate Paycheck</button>
             </td>
         </tr>
     );
