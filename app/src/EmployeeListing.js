@@ -267,7 +267,7 @@ const EmployeeListing = () => {
                             </div>
                         </div>
 
-                        {currentDependents.map(({id, firstName, lastName, dateOfBirth, relationship}) => (
+                        {currentDependents == null ? null : currentDependents.map(({id, firstName, lastName, dateOfBirth, relationship}) => (
                         <DependentDetails
                             key={id}
                             id={id}
