@@ -13,6 +13,39 @@ namespace Api.Controllers
     {
         private string jsonFilePath = "EmployeeData.json";
 
+        [SwaggerOperation(Summary = "Get dependents of employee by id")]
+        [HttpGet("GetDependents/{id}")]
+        public async Task<ActionResult<ApiResponse<List<GetDependentDto>>>> GetDependents(int id)
+        {
+            var employees = HelperFunctions.GetAllEmployees();
+            IEnumerable<GetEmployeeDto> employeesAsCollection =
+                from employeeObject in employees
+                where employeeObject.Id == id
+                select employeeObject;
+            GetEmployeeDto targetEmployee = employeesAsCollection.FirstOrDefault();
+
+            if (targetEmployee != null)
+            {
+                var result = new ApiResponse<List<GetDependentDto>>()
+                {
+                    Data = targetEmployee.Dependents as List<GetDependentDto>,
+                    Success = true,
+                    Message = "Employee Found"
+                };
+                return result;
+            }
+            else
+            {
+                var result = new ApiResponse<List<GetDependentDto>>()
+                {
+                    Success = false,
+                    Message = "Employee Not Found"
+                };
+                return result;
+            }
+
+        }
+
         [SwaggerOperation(Summary = "Get employee by id")]
         [HttpGet("{id}")]
         public async Task<ActionResult<ApiResponse<GetEmployeeDto>>> Get(int id)

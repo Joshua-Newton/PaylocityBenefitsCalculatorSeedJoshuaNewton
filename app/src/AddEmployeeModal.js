@@ -1,14 +1,17 @@
-import { useState } from "react";
+// ABANDONED FILE, DELETE IF NOT REVISITED
+
+import { useEffect, useState } from "react";
 import { baseUrl } from "./Constants";
+import DependentDetails from "./DependentDetails"
 
 const AddEmployeeModal = (props) => {
 
-    // Fields for Employee values. Exclude ID as api handles assigning this value.
+    // Fields for Employee values.
     const [firstName, setFirstName] = useState('')
     const [lastName, setLastName] = useState('')
     const [dateOfBirth, setDateOfBirth] = useState('')
     const [salary, setSalary] = useState('')
-    
+
     const handleFirstNameChange = event => {
         setFirstName(event.target.value);
     }
@@ -22,8 +25,7 @@ const AddEmployeeModal = (props) => {
         setSalary(event.target.value);
     }
     
-    
-
+    // For new employee
     const SubmitEmployee = async () => {
         const employeeData = {
             FirstName: firstName,
@@ -44,7 +46,7 @@ const AddEmployeeModal = (props) => {
 
         const resultInJSON = await result.json();
         console.log(resultInJSON);
-    }    
+    }
 
     return (
         <div className="modal fade" id="add-employee-modal" tabIndex="-1" aria-labelledby="add-employee-modal-label" aria-hidden="true">
@@ -56,11 +58,16 @@ const AddEmployeeModal = (props) => {
                     </div>
                     <div className="modal-body">
                         <div className="row">
+                            <div className="col">
+                                <h4>Employee Details</h4>
+                            </div>
+                        </div>
+                        <div className="row">
                             <div className="col-6">
                                 <label>LastName</label>
                             </div>
                             <div className="col-6">
-                                <input id="idLastName" type={"text"} onChange={handleLastNameChange}></input>
+                                <input id="idLastName" value={props.currentLastName} type={"text"} onChange={props.handleCurrentLastNameChange}></input>
                             </div>
                         </div>
                         <div className="row">
@@ -68,7 +75,7 @@ const AddEmployeeModal = (props) => {
                                 <label>FirstName</label>
                             </div>
                             <div className="col-6">
-                                <input id="idFirstName" type={"text"} onChange={handleFirstNameChange}></input>
+                                <input id="idFirstName" value={props.currentEmployee.FirstName} type={"text"} onChange={handleFirstNameChange}></input>
                             </div>
                         </div>
                         <div className="row">
@@ -76,7 +83,7 @@ const AddEmployeeModal = (props) => {
                                 <label>DOB</label>
                             </div>
                             <div className="col-6">
-                                <input id="idDOB" type={"date"} onChange={handleDateOfBirthChange}></input>
+                                <input id="idDOB" value={props.currentEmployee.DateOfBirth} type={"date"} onChange={handleDateOfBirthChange}></input>
                             </div>
                         </div>
                         <div className="row">
@@ -84,7 +91,7 @@ const AddEmployeeModal = (props) => {
                                 <label>Salary</label>
                             </div>
                             <div className="col-6">
-                                <input id="idSalary" type={"number"} onChange={handleSalaryChange}></input>
+                                <input id="idSalary" value={props.currentEmployee.Salary} type={"number"} onChange={handleSalaryChange}></input>
                             </div>
                         </div>
                         <div className="row">
@@ -95,6 +102,9 @@ const AddEmployeeModal = (props) => {
                                 <input id="numDependents"></input>
                             </div>
                         </div>
+
+                        <DependentDetails></DependentDetails>
+                        
                     </div>
                     <div className="modal-footer">
                         <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
