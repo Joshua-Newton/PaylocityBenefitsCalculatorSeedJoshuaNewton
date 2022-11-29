@@ -5,11 +5,13 @@ import AddEmployeeModal from './AddEmployeeModal';
 import DependentDetails from "./DependentDetails"
 
 const EmployeeListing = () => {
+    // States to keep track of
     const [employees, setEmployees] = useState([]);
     const [error, setError] = useState(null);
     const [currentEmployee, setCurrentEmployee] = useState([]);
     const [currentId, setCurrentId] = useState('');
     const [currentDependents, setCurrentDependents] = useState([]);
+    const [newEmploye, setNewEmployee] = useState('');
     // Fields for Employee values.
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -32,7 +34,6 @@ const EmployeeListing = () => {
     const firstNameRef = useRef(null);
     const dateOfBirthRef = useRef(null);
     const salaryRef = useRef(null);
-    const numDependentsRef = useRef(null);
 
     // change handlers
     const handleFirstNameChange = event => {
@@ -74,8 +75,6 @@ const EmployeeListing = () => {
         console.log(resultInJSON);
     }
 
-    //---------------------------------------------------------
-
     async function setEmployee(employeeId){
         const rawEmployee = await fetch(`${baseUrl}/api/v1/Employees/${employeeId}`, {
             method: 'GET',
@@ -101,12 +100,6 @@ const EmployeeListing = () => {
             firstNameRef.current.value = responseEmployee.data.firstName;
             dateOfBirthRef.current.value = responseEmployee.data.dateOfBirth.split('T')[0];
             salaryRef.current.value = responseEmployee.data.salary;
-            if(responseEmployee.data.dependents){
-                numDependentsRef.current.value = responseEmployee.data.dependents.length;
-            }
-            else{
-                numDependentsRef.current.value = 0;
-            }
         }
         else {
             setCurrentEmployee(null);
@@ -182,7 +175,25 @@ const EmployeeListing = () => {
             data[index][event.target.name] = event.target.value;
         }
         setDependentFields(data);
+    }
 
+    const addFields = () => {
+        let newField = {id: '', lastName: '', firstName: '', dateOfBirth: '', relationship: ''}
+        if(dependentFields){
+            setDependentFields([...dependentFields, newField]);
+        }
+        else {
+            setDependentFields([newField]);
+        }
+    }
+
+    const removeDependent = (index) => {
+        console.log("Remove Dependent Called")
+        console.log("Index: " + index);
+        
+        let data = [...dependentFields];
+        data.splice(index, 1);
+        setDependentFields(data);
     }
 
     const addEmployeeModalId = "add-employee-modal";
@@ -266,29 +277,7 @@ const EmployeeListing = () => {
                                 <input id="idSalary" ref={salaryRef} type={"number"} onChange={handleSalaryChange}></input>
                             </div>
                         </div>
-                        <div className="row">
-                            <div className="col-6">
-                                <label>Number of Dependents</label>
-                            </div>
-                            <div className="col-6">
-                                <input ref={numDependentsRef} id="numDependents" onChange={handleNumDependentsChange}></input>
-                            </div>
-                        </div>
 
-                        {/*
-                         {currentDependents == null ? null : currentDependents.map(({id, firstName, lastName, dateOfBirth, relationship}) => (
-                                <DependentDetails
-                            key={id}
-                            id={id}
-                            firstName={firstName}
-                            lastName={lastName}
-                            dateOfBirth={dateOfBirth}
-                            relationship={relationship}
-                            editModalId={addEmployeeModalId}
-                            currentEmployee={currentEmployee}
-                                />
-                            ))} 
-                            */}
                         <form>
                             {dependentFields == null ? null : dependentFields.map((input, index) => {
                                 return (
@@ -296,6 +285,11 @@ const EmployeeListing = () => {
                                         <div className="row">
                                             <div className="col">
                                                 <h4>Dependent</h4>
+                                            </div>
+                                        </div>
+                                        <div className="row">
+                                            <div className='col'>
+                                                <button type='button' className='btn btn-secondary' onClick={() => removeDependent(index)}>Remove Dependent</button>
                                             </div>
                                         </div>
                                         <div className="row">
@@ -359,6 +353,7 @@ const EmployeeListing = () => {
                     </div>
                     <div className="modal-footer">
                         <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type='button' className='btn btn-secondary' onClick={addFields}>Add Dependent</button>
                         <button type="button" className="btn btn-primary" onClick={SubmitEmployee}>Save changes</button>
                     </div>
                 </div>
