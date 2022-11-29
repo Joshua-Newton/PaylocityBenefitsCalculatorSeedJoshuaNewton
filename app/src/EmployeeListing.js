@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Employee from './Employee';
 import { baseUrl } from './Constants';
-import AddEmployeeModal from './AddEmployeeModal';
-import DependentDetails from "./DependentDetails"
 
 const EmployeeListing = () => {
     // States to keep track of
