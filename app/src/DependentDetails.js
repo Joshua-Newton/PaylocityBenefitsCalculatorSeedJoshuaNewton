@@ -4,6 +4,13 @@ const DependentDetails = (props) => {
     const relationship = props.relationship || 0;
     const dateOfBirth = props.dateOfBirth.split('T')[0] || null;
 
+    const possibleRelationships = ["none", "spouse", "domesticPartner", "child"]
+    function DetermineRelationship() {
+        return possibleRelationships[relationship];
+    }
+
+
+
     return (
         <div className="DependentDetails">
             <div className="row">
@@ -40,8 +47,8 @@ const DependentDetails = (props) => {
                     <label>Relationship</label>
                 </div>
                 <div className="col-6">
-                    <select value={relationship}>
-                        <option value="none"></option>
+                    <select value={DetermineRelationship()}>
+                        <option value="none">None</option>
                         <option value="spouse">Spouse</option>
                         <option value="domesticPartner">Domestic Partner</option>
                         <option value="child">Child</option>

@@ -18,7 +18,7 @@ const EmployeeListing = () => {
     const [numDependents, setNumDependents] = useState('');
 
     const [dependentFields, setDependentFields] = useState([
-        {LastName: '', FirstName: '', DateOfBirth: '', elationship: ''}
+        {LastName: '', FirstName: '', DateOfBirth: '', relationship: ''}
     ])
 
     // Refs for loading in existing values
