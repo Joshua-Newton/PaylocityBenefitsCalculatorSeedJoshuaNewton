@@ -125,6 +125,71 @@ namespace Api.Controllers
 
             if(employees != null)
             {
+                List<GetDependentDto> newEmployeeDependents = new List<GetDependentDto>();
+                // Only perform dependents logic if dependents were passed in
+                if (newEmployee.Dependents != null && newEmployee.Dependents.Count > 0)
+                {
+                    // Get the number of dependents. This will determine IDs of new dependents.
+                    int numDependents = 0;
+                    foreach (var employee in employees)
+                    {
+                        if (employee.Dependents != null)
+                        {
+                            foreach (var dependent in employee.Dependents)
+                            {
+                                numDependents++;
+                            }
+                        }
+                    }
+                    
+                    bool spouseOrDomesticPartnerAdded = false;
+                    foreach(var dependent in newEmployee.Dependents)
+                    {
+                        // Passed in dependents will be of type AddDependentDto, but we need to assigne the Id to each of these dependents
+                        // So, take their data and apply it to a GetDependentDto, while checking for spouse/domestic partner rules
+                        GetDependentDto dependentInstance = new GetDependentDto()
+                        {
+                            FirstName = dependent.FirstName,
+                            LastName = dependent.LastName,
+                            DateOfBirth = dependent.DateOfBirth
+                        };
+                        if(dependent.Relationship == Relationship.Spouse || dependent.Relationship == Relationship.DomesticPartner)
+                        {
+                            if(!spouseOrDomesticPartnerAdded)
+                            {
+                                // Haven't seen another spouse/domestic partner, can add this dependent safely. Set flag that we've seen one.
+                                spouseOrDomesticPartnerAdded = true;
+                                // numDependents is the number of currently existing dependents, so add to it first to get a new id
+                                numDependents++;
+                                dependentInstance.Id = numDependents;
+                                dependentInstance.Relationship = dependent.Relationship;
+                                newEmployeeDependents.Add(dependentInstance);
+                            }
+                            else
+                            {
+                                // There are too many spouse/domestic partners being added, return a failed response
+                                var resultFromBadDependents = new ApiResponse<List<AddEmployeeDto>>
+                                {
+                                    Success = false,
+                                    Message = "Only one spouse/domestic partner allowed",
+                                    Error = "Invalid dependent set passed"
+                                };
+                                return resultFromBadDependents;
+                            }
+                        }
+                        else
+                        {
+                            // Dependent is relationship none or child, can add as many as we want.
+                            // numDependents is the number of currently existing dependents, so add to it first to get a new id
+                            numDependents++;
+                            dependentInstance.Id = numDependents;
+                            dependentInstance.Relationship = dependent.Relationship;
+                            newEmployeeDependents.Add(dependentInstance);
+                        }
+                    }
+                }
+
+
 
                 var newEmployeeRecord = new GetEmployeeDto()
                 {
@@ -133,7 +198,7 @@ namespace Api.Controllers
                     LastName = newEmployee.LastName,
                     Salary = newEmployee.Salary,
                     DateOfBirth = newEmployee.DateOfBirth,
-                    Dependents = newEmployee.Dependents as ICollection<GetDependentDto>
+                    Dependents = newEmployeeDependents
                 };
 
                 employees.Add(newEmployeeRecord);

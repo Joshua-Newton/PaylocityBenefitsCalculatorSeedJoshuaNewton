@@ -18,8 +18,14 @@ const EmployeeListing = () => {
     const [numDependents, setNumDependents] = useState('');
 
     const [dependentFields, setDependentFields] = useState([
-        {LastName: '', FirstName: '', DateOfBirth: '', relationship: ''}
+        {id: '', lastName: '', firstName: '', dateOfBirth: '', relationship: ''}
     ])
+
+    const possibleRelationships = ["none", "spouse", "domesticPartner", "child"]
+
+    function DetermineRelationship(relationship) {
+        return possibleRelationships[relationship];
+    }
 
     // Refs for loading in existing values
     const lastNameRef = useRef(null);
@@ -52,7 +58,7 @@ const EmployeeListing = () => {
             LastName: lastName,
             DateOfBirth: dateOfBirth,
             Salary: salary,
-            Dependents: []
+            Dependents: dependentFields
         }
 
         const result = await fetch(`${baseUrl}/api/v1/Employees/`, {
@@ -71,77 +77,54 @@ const EmployeeListing = () => {
     //---------------------------------------------------------
 
     async function setEmployee(employeeId){
-        if(employeeId){
-            console.log("Passed ID: " + employeeId)
-        }
-        if(currentEmployee != null){
-            console.log("Before: " + currentEmployee.id)
-        }
-        else {
-            console.log("Before: null")
-        }
-
-
-
         const rawEmployee = await fetch(`${baseUrl}/api/v1/Employees/${employeeId}`, {
             method: 'GET',
             headers: {
                 'Content-Type' : 'application/json'
             }
         });
-        /*
-        const rawDependents = await fetch(`${baseUrl}/api/v1/Employees/GetDependents/${employeeId}`, {
-            method: 'GET',
-            headers: {
-                'Content-Type' : 'application/json'
-            }
-        });
-        */
+
         const responseEmployee = await rawEmployee.json();
-        //const responseDependents = await rawDependents.json();
 
         if(responseEmployee.success){
             setCurrentEmployee(responseEmployee.data);
             setCurrentId(responseEmployee.data.id);
-            setCurrentDependents(responseEmployee.data.dependents)
+            // TODO: Dependent fields redundant?
+            setCurrentDependents(responseEmployee.data.dependents);
+            setDependentFields(responseEmployee.data.dependents);
+            
+            setFirstName(responseEmployee.data.firstName);
+            setLastName(responseEmployee.data.lastName);
+            setDateOfBirth(responseEmployee.data.dateOfBirth);
+            setSalary(responseEmployee.data.salary);
             lastNameRef.current.value = responseEmployee.data.lastName;
             firstNameRef.current.value = responseEmployee.data.firstName;
             dateOfBirthRef.current.value = responseEmployee.data.dateOfBirth.split('T')[0];
             salaryRef.current.value = responseEmployee.data.salary;
-            numDependentsRef.current.value = responseEmployee.data.dependents.length;
+            if(responseEmployee.data.dependents){
+                numDependentsRef.current.value = responseEmployee.data.dependents.length;
+            }
+            else{
+                numDependentsRef.current.value = 0;
+            }
         }
         else {
             setCurrentEmployee(null);
             setCurrentId(null);
+            // TODO: Dependent fields redundant?
+            setCurrentDependents(null);
+            setDependentFields(null);
+
+            setFirstName(null);
+            setLastName(null);
+            setDateOfBirth(null);
+            setSalary(null);
             lastNameRef.current.value = "";
             firstNameRef.current.value = "";
             dateOfBirthRef.current.value = null;
             salaryRef.current.value = "";
             
         }
-
-        /*
-        if(responseDependents.success){
-            setCurrentDependents((responseDependents.data));
-            if(responseDependents.data){
-                numDependentsRef.current.value = responseDependents.data.length;
-            }
-            else {
-                numDependentsRef.current.value = 0;
-            }
-        }
-        else {
-            setCurrentDependents(null);
-            numDependentsRef.current.value = 0;
-        }
-        */
-
-        if(currentEmployee != null){
-            console.log("After: " + currentEmployee.id)
-        }
-        else {
-            console.log("After: null")
-        }    
     }
 
     useEffect(() => {
@@ -176,6 +159,31 @@ const EmployeeListing = () => {
         }
     }, [currentEmployee])
 
+    const handleDependentFormChange = (index, event) => {
+        let data = [...dependentFields];
+        
+        if(event.target.name == "relationship"){
+            switch(event.target.value){
+                case "spouse":
+                    data[index][event.target.name] = 1;
+                    break;
+                case "domesticPartner":
+                    data[index][event.target.name] = 2;
+                    break;
+                case "child":
+                    data[index][event.target.name] = 3;
+                    break;
+                default:
+                    data[index][event.target.name] = 0;
+                    break;
+            }
+        }
+        else {
+            data[index][event.target.name] = event.target.value;
+        }
+        setDependentFields(data);
+
+    }
 
     const addEmployeeModalId = "add-employee-modal";
 
@@ -267,8 +275,9 @@ const EmployeeListing = () => {
                             </div>
                         </div>
 
-                        {currentDependents == null ? null : currentDependents.map(({id, firstName, lastName, dateOfBirth, relationship}) => (
-                        <DependentDetails
+                        {/*
+                         {currentDependents == null ? null : currentDependents.map(({id, firstName, lastName, dateOfBirth, relationship}) => (
+                                <DependentDetails
                             key={id}
                             id={id}
                             firstName={firstName}
@@ -277,8 +286,76 @@ const EmployeeListing = () => {
                             relationship={relationship}
                             editModalId={addEmployeeModalId}
                             currentEmployee={currentEmployee}
-                        />
-                    ))}
+                                />
+                            ))} 
+                            */}
+                        <form>
+                            {dependentFields == null ? null : dependentFields.map((input, index) => {
+                                return (
+                                    <div key={index} className="DependentDetails">
+                                        <div className="row">
+                                            <div className="col">
+                                                <h4>Dependent</h4>
+                                            </div>
+                                        </div>
+                                        <div className="row">
+                                            <div className="col-6">
+                                                <label>First Name</label>
+                                            </div>
+                                            <div className="col-6">
+                                                <input 
+                                                    name="firstName"
+                                                    value={input.firstName} 
+                                                    type={"text"}
+                                                    onChange={event => handleDependentFormChange(index, event)}>
+                                                </input>
+                                            </div>
+                                        </div>
+                                        <div className="row">
+                                            <div className="col-6">
+                                                <label>Last Name</label>
+                                            </div>
+                                            <div className="col-6">
+                                                <input 
+                                                    name="lastName"
+                                                    value={input.lastName}
+                                                    type={"text"}
+                                                    onChange={event => handleDependentFormChange(index, event)}>
+                                                 </input>
+                                            </div>
+                                        </div>
+                                        <div className="row">
+                                            <div className="col-6">
+                                                <label>DateOfBirth</label>
+                                            </div>
+                                            <div className="col-6">
+                                                <input 
+                                                    name="dateOfBirth"
+                                                    value={input.dateOfBirth.split("T")[0]}
+                                                    type={"date"}
+                                                    onChange={event => handleDependentFormChange(index, event)}>
+                                                </input>
+                                            </div>
+                                        </div>
+                                        <div className="row">
+                                            <div className="col-6">
+                                                <label>Relationship</label>
+                                            </div>
+                                            <div className="col-6">
+                                                <select name="relationship" value={DetermineRelationship(input.relationship)} onChange={event => handleDependentFormChange(index, event)}>
+                                                    <option value="none">None</option>
+                                                    <option value="spouse">Spouse</option>
+                                                    <option value="domesticPartner">Domestic Partner</option>
+                                                    <option value="child">Child</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </form>
+
+
                     </div>
                     <div className="modal-footer">
                         <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>

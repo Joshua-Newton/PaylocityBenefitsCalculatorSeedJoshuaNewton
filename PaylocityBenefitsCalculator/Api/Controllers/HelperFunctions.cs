@@ -72,6 +72,28 @@ namespace Api.Controllers
 
         public static List<GetDependentDto> GetAllDependents(List<GetEmployeeDto> employees) 
         {
+            // Non Linq method:
+
+            // Create the collection to be returned
+            List<GetDependentDto> dependents = new List<GetDependentDto>();
+            // Loop through every employee
+            foreach(var employee in employees)
+            {
+                // If they have dependents, loop through them and add them to collection
+                if(employee.Dependents != null && employee.Dependents.Count > 0) 
+                { 
+                    foreach(GetDependentDto dependent in employee.Dependents)
+                    {
+                        dependents.Add(dependent);
+                    }
+                }
+            }
+            // return the collection
+            return dependents;
+
+            // LINQ method. This causes issues due to not being able to convert results to a list for some reason.
+            // Leaving here because using LINQ would be better than using a nested for loop if a good workaround is found.
+            /*
             IEnumerable<GetDependentDto> dependentsAsCollection =
                 from employeeObject in employees
                 from dependentObject in employeeObject.Dependents
@@ -87,9 +109,10 @@ namespace Api.Controllers
                 int index = 0;
                 while(!endFound)
                 {
-                    // This isn't a very good way to do this.... but ToList() failing is forcing my hand.
+                    // This isn't a very good way to do this.... but dependentsAsCollection.ToList() failing is forcing my hand.
                     // TODO: Try to find a better way after the rest of the project is done.
-                    try {
+                    try
+                    {
                         listOfDependents.Add(dependentsAsCollection.ElementAt<GetDependentDto>(index));
                         index++;
                     }
@@ -102,6 +125,7 @@ namespace Api.Controllers
                 return listOfDependents;
             }
             return null;
+            */
         }
 
         public static GetEmployeeDto GetEmployeeDtoContainingDependentId(int id, List<GetEmployeeDto> employees)
