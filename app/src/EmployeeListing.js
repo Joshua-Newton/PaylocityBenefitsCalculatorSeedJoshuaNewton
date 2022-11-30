@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Employee from './Employee';
 import { baseUrl, currencyFormat } from './Constants';
-import PaycheckModal from './PaycheckModal';
 
 const EmployeeListing = () => {
     // START PAYCHECK CALCULATION VARIABLES/FUNCTIONS
@@ -460,19 +459,6 @@ const EmployeeListing = () => {
             </div>
         </div>
 
-        {/*
-        <PaycheckModal
-            paycheckModalId={paycheckModalId}
-            currentEmployee={currentEmployee}
-            salary={currencyFormat(payCheckSalary)}
-            basePay={currencyFormat(basePay)}
-            monthlyDeduction={currencyFormat(monthlyDeduction)}
-            dependentDeduction={currencyFormat(dependentDeduction)}
-            highEarnerDeduction={currencyFormat(highEarnerDeduction)}
-            oldDependentDeduction={currencyFormat(oldDependentDeduction)}
-            finalPayCheckValue={currencyFormat(finalPayCheckValue)}
-        />
-        */}
         <div>
             <div className="modal fade" id={paycheckModalId} tabIndex="-1" aria-labelledby="add-employee-modal-label" aria-hidden="true">
                 <div className="modal-dialog">
