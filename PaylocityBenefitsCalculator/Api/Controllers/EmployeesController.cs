@@ -320,20 +320,22 @@ namespace Api.Controllers
                             {
                                 original.FirstName = updatedDependent.FirstName;
                                 original.LastName = updatedDependent.LastName;
-                                if(HelperFunctions.CheckIfSpouseOrPartnerExistsExcludingId(originalEmployee, updatedDependent.Id))
+                                original.DateOfBirth = updatedDependent.DateOfBirth;
+                                if (updatedDependent.Relationship == Relationship.Spouse || updatedDependent.Relationship == Relationship.DomesticPartner)
                                 {
-                                    var failedResult = new ApiResponse<GetEmployeeDto>
+                                    if (HelperFunctions.CheckIfSpouseOrPartnerExistsExcludingId(originalEmployee, updatedDependent.Id))
                                     {
-                                        Message = "Can only have one spouse or domestic partner, trying to add more",
-                                        Error = "Only one spouse or partner allowed",
-                                        Success = false
-                                    };
-                                    return failedResult;
+                                        var failedResult = new ApiResponse<GetEmployeeDto>
+                                        {
+                                            Message = "Can only have one spouse or domestic partner, trying to add more",
+                                            Error = "Only one spouse or partner allowed",
+                                            Success = false
+                                        };
+                                        return failedResult;
+                                    }
                                 }
-                                else
-                                {
-                                    original.Relationship = updatedDependent.Relationship;
-                                }
+                                original.Relationship = updatedDependent.Relationship;
+                                
                                 break;
                             }
                             

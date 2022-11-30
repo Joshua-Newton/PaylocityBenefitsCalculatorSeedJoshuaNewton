@@ -26,9 +26,9 @@ const Employee = (props) => {
             <td>{currencyFormat(salary)}</td>
             <td>{props.dependents?.length || 0}</td>
             <td>
-                <button className={"btn btn-secondary"} onClick={() => props.setEmployee(props.id)}data-bs-toggle="modal" data-bs-target={`#${props.editModalId}`}>Edit</button>  
-                <button className={"btn btn-secondary"}  onClick={() => DeleteEmployee(props.id)}>Delete</button>
-                <button className={"btn btn-secondary"} >Calclate Paycheck</button>
+                <button className={"btn btn-secondary"} onClick={() => {props.setEmployee(props.id)}} data-bs-toggle="modal" data-bs-target={`#${props.editModalId}`}>Edit</button>  
+                <button className={"mx-1 btn btn-secondary"} onClick={() => DeleteEmployee(props.id)}>Delete</button>
+                <button className={"btn btn-secondary"} onClick={() => {props.setEmployee(props.id)}} data-bs-toggle="modal" data-bs-target={`#${props.paycheckModalId}`}>Calculate Paycheck</button>
             </td>
         </tr>
     );

@@ -1,14 +1,79 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Employee from './Employee';
-import { baseUrl } from './Constants';
+import { baseUrl, currencyFormat } from './Constants';
+import PaycheckModal from './PaycheckModal';
 
 const EmployeeListing = () => {
+    // START PAYCHECK CALCULATION VARIABLES/FUNCTIONS
+    const payPeriods = 26;
+    const monthlyDeduction = 1000;
+    const perDependentMonthlyDeduction = 600;
+    const highEarnerThreshold = 80000;
+    const highEarnerAdditionalPercentCost = 0.02;
+    const oldDependentAgeThreshold = 50;
+    const oldDependentAdditionalMonthlyDeduction = 200;
+
+    const [payCheckSalary, setPayCheckSalary] = useState(Number);
+    const [basePay, setBasePay] = useState(Number);
+    const [dependentDeduction, setDependentDeduction] = useState(Number);
+    const [highEarnerDeduction, setHighEarnerDeduction] = useState(Number);
+    const [oldDependentDeduction, setOldDependentDeduction] = useState(Number);
+    const [finalPayCheckValue, setFinalPayCheckValue] = useState(Number);
+
+    async function setPayVariables(){
+        let _payCheckSalary = (Number(currentEmployee == null ? 0 : currentEmployee.salary))
+        await setPayCheckSalary(_payCheckSalary)
+        // Base Pay
+        let _basePay = (Number(currentEmployee == null ? 0 : currentEmployee.salary)/payPeriods)
+        await setBasePay(_basePay);
+        // Dependent Deduction
+        let _dependentDeduction = (Number(currentEmployee == null || currentEmployee.dependents == null ? 0 : currentEmployee.dependents.length * perDependentMonthlyDeduction));
+        await setDependentDeduction(_dependentDeduction);
+        // High Earner Deduction
+        let _highEarnerDeduction = 0;
+        if(Number(currentEmployee == null || currentEmployee.salary == null ? 0 : currentEmployee.salary) > highEarnerThreshold){
+            _highEarnerDeduction = (Number(currentEmployee.salary) * highEarnerAdditionalPercentCost / payPeriods);
+            await setHighEarnerDeduction(_highEarnerDeduction);
+        }
+        else{
+            await setHighEarnerDeduction((0));
+        }
+        // OldDependent Deduction
+        let oldDependentDeductionAmount = 0;
+        if(currentEmployee == null || currentEmployee.dependents == null || currentEmployee.dependents.length <= 0){
+            await setOldDependentDeduction((oldDependentDeductionAmount));
+        }
+        else {
+            let currentDate = new Date();
+            // To calculate the no. of days between two dates
+            let daysAgeThreshold = oldDependentAgeThreshold * 365;
+            for (let i = 0; i < currentEmployee.dependents.length; i++) {
+                var timeAge = currentDate.getTime() - new Date(currentEmployee.dependents[i].dateOfBirth.split('T')[0]).getTime();
+                var daysAge = timeAge / (1000 * 3600 * 24);
+                if(daysAge > daysAgeThreshold){
+                    oldDependentDeductionAmount += oldDependentAdditionalMonthlyDeduction;
+                }
+            }
+            await setOldDependentDeduction((oldDependentDeductionAmount));
+        }
+        // Final Paycheck value
+        let result = _basePay - monthlyDeduction - _dependentDeduction - _highEarnerDeduction - oldDependentDeductionAmount;
+        await setFinalPayCheckValue(Number(result));
+    }
+    
+    // Step 1 - Get Salary
+    // Step 2 - Get base pay per pay period
+    // Step 3 - Deduct base employee benefits cost from paycheck
+    // Step 4 - Get Pay after Dependent Deduction
+    // Step 5 - If it's a high earner, deduct the high earner rate
+    // Step 6 - If any dependents are older than the threshold age, then deduct additional costs for these dependents
+    
+    // END PAYCHECK CALCULATION VARIABLES/FUNCTIONS
+    
     // States to keep track of
     const [employees, setEmployees] = useState([]);
     const [error, setError] = useState(null);
     const [currentEmployee, setCurrentEmployee] = useState([]);
-    const [currentId, setCurrentId] = useState('');
-    const [currentDependents, setCurrentDependents] = useState([]);
     const [newEmployee, setNewEmployee] = useState('');
     // Fields for Employee values.
     const [firstName, setFirstName] = useState('');
@@ -27,11 +92,21 @@ const EmployeeListing = () => {
     }
 
     // Refs for loading in existing values
+    // This solves issue where states were not updating in time for modals to open
+    // However, I couldn't figure out how to pass them to child components, which is why this file ballooned.
     const lastNameRef = useRef(null);
     const firstNameRef = useRef(null);
     const dateOfBirthRef = useRef(null);
     const salaryRef = useRef(null);
 
+    const payCheckSalaryRef = useRef(null);
+    const basePayRef = useRef(null);
+    const monthlyDeductionRef = useRef(null);
+    const dependentDeductionRef = useRef(null);
+    const highEarnerDeductionRef = useRef(null);
+    const oldDependentDeductionRef = useRef(null);
+    const finalPayCheckValueRef = useRef(null);
+    
     // change handlers
     const handleFirstNameChange = event => {
         setFirstName(event.target.value);
@@ -84,8 +159,6 @@ const EmployeeListing = () => {
     }
 
     async function setEmployee(employeeId){
-        
-
         const rawEmployee = await fetch(`${baseUrl}/api/v1/Employees/${employeeId}`, {
             method: 'GET',
             headers: {
@@ -98,9 +171,7 @@ const EmployeeListing = () => {
         if(responseEmployee.success){
             setNewEmployee(false);
             setCurrentEmployee(responseEmployee.data);
-            setCurrentId(responseEmployee.data.id);
             setDependentFields(responseEmployee.data.dependents);
-            
             setFirstName(responseEmployee.data.firstName);
             setLastName(responseEmployee.data.lastName);
             setDateOfBirth(responseEmployee.data.dateOfBirth);
@@ -113,9 +184,7 @@ const EmployeeListing = () => {
         else {
             setNewEmployee(true);
             setCurrentEmployee(null);
-            setCurrentId(null);
             setDependentFields(null);
-
             setFirstName(null);
             setLastName(null);
             setDateOfBirth(null);
@@ -124,8 +193,15 @@ const EmployeeListing = () => {
             firstNameRef.current.value = "";
             dateOfBirthRef.current.value = null;
             salaryRef.current.value = "";
-            
         }
+        await setPayVariables()
+        payCheckSalaryRef.current.innerHTML = currencyFormat(payCheckSalary);
+        basePayRef.current.innerHTML = currencyFormat(basePay);
+        dependentDeductionRef.current.innerHTML = currencyFormat(dependentDeduction)
+        highEarnerDeductionRef.current.innerHTML = currencyFormat(highEarnerDeduction);
+        oldDependentDeductionRef.current.innerHTML = currencyFormat(oldDependentDeduction);
+        finalPayCheckValueRef.current.innerHTML = currencyFormat(finalPayCheckValue);
+
     }
 
     const getEmployees = async () => {
@@ -194,6 +270,7 @@ const EmployeeListing = () => {
     }
 
     const addEmployeeModalId = "add-employee-modal";
+    const paycheckModalId = "paycheck-modal";
 
     return (
     <div className="employee-listing">
@@ -221,6 +298,7 @@ const EmployeeListing = () => {
                     salary={salary}
                     dependents={dependents}
                     editModalId={addEmployeeModalId}
+                    paycheckModalId={paycheckModalId}
                     currentEmployee={currentEmployee}
                     setEmployee={setEmployee}
                     getEmployees={getEmployees}
@@ -230,7 +308,7 @@ const EmployeeListing = () => {
         </table>
         <button onClick={() => setEmployee(0)} type="button" className="btn btn-primary" data-bs-toggle="modal" data-bs-target={`#${addEmployeeModalId}`}>Add Employee</button>
         {/* Former AddEmployeeModal, was having trouble passing refs so I pulled it back into the EmployeeListing. */}
-        <div className="modal fade" id="add-employee-modal" tabIndex="-1" aria-labelledby="add-employee-modal-label" aria-hidden="true">
+        <div className="modal fade" id={addEmployeeModalId} tabIndex="-1" aria-labelledby="add-employee-modal-label" aria-hidden="true">
             <div className="modal-dialog">
                 <div className="modal-content">
                     <div className="modal-header">
@@ -353,6 +431,101 @@ const EmployeeListing = () => {
                         <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                         <button type='button' className='btn btn-secondary' onClick={addFields}>Add Dependent</button>
                         <button type="button" className="btn btn-primary" data-bs-dismiss="modal" onClick={SubmitEmployee}>Save changes</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/*
+        <PaycheckModal
+            paycheckModalId={paycheckModalId}
+            currentEmployee={currentEmployee}
+            salary={currencyFormat(payCheckSalary)}
+            basePay={currencyFormat(basePay)}
+            monthlyDeduction={currencyFormat(monthlyDeduction)}
+            dependentDeduction={currencyFormat(dependentDeduction)}
+            highEarnerDeduction={currencyFormat(highEarnerDeduction)}
+            oldDependentDeduction={currencyFormat(oldDependentDeduction)}
+            finalPayCheckValue={currencyFormat(finalPayCheckValue)}
+        />
+        */}
+        <div>
+            <div className="modal fade" id={paycheckModalId} tabIndex="-1" aria-labelledby="add-employee-modal-label" aria-hidden="true">
+                <div className="modal-dialog">
+                    <div className="modal-content">
+                        <div className="modal-header">
+                            <h1 className="modal-title fs-5" id="add-employee-modal-label">Paycheck</h1>
+                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div className="modal-body">
+                            <div className='row'>
+                                <div className='col-6'>
+                                    <label>Name: </label>
+                                </div>
+                                <div className='col-6'>
+                                    <span>{lastName} , {firstName}</span>
+                                </div>
+                            </div>
+                            <div className='row'>
+                                <div className='col-6'>
+                                    <label>Salary: </label>
+                                </div>
+                                <div className="col-6">
+                                    <span ref={payCheckSalaryRef}>{salary}</span>
+                                </div>
+                            </div>
+                            <div className='row'>
+                                <div className='col-6'>
+                                    <label>Base Pay Per Paycheck: </label>
+                                </div>
+                                <div className="col-6">
+                                    <span ref={basePayRef}>{basePay}</span>
+                                </div>
+                            </div>
+                            <div className='row'>
+                                <div className='col-6'>
+                                    <label>Standard Benefit Deduction: </label>
+                                </div>
+                                <div className="col-6">
+                                    <span ref={monthlyDeductionRef}>{currencyFormat(monthlyDeduction)}</span>
+                                </div>
+                            </div>
+                            <div className='row'>
+                                <div className='col-6'>
+                                    <label>Dependent Deduction: </label>
+                                </div>
+                                <div className="col-6">
+                                    <span ref={dependentDeductionRef}>{dependentDeduction}</span>
+                                </div>
+                            </div>
+                            <div className='row'>
+                                <div className='col-6'>
+                                    <label>High Earner Deduction: </label>
+                                </div>
+                                <div className="col-6">
+                                    <span ref={highEarnerDeductionRef}>{highEarnerDeduction}</span>
+                                </div>
+                            </div>
+                            <div className='row'>
+                                <div className='col-6'>
+                                    <label>Old Dependent Deduction: </label>
+                                </div>
+                                <div className="col-6">
+                                    <span ref={oldDependentDeductionRef}>{oldDependentDeduction}</span>
+                                </div>
+                            </div>
+                            <div className='row'>
+                                <div className='col-6'>
+                                    <label>Final Paycheck: </label>
+                                </div>
+                                <div className="col-6">
+                                    <span ref={finalPayCheckValueRef}>{finalPayCheckValue}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className='modal-footer'>
+                            <button type="button" className="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
                     </div>
                 </div>
             </div>
