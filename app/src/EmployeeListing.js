@@ -194,13 +194,7 @@ const EmployeeListing = () => {
             dateOfBirthRef.current.value = null;
             salaryRef.current.value = "";
         }
-        await setPayVariables()
-        payCheckSalaryRef.current.innerHTML = currencyFormat(payCheckSalary);
-        basePayRef.current.innerHTML = currencyFormat(basePay);
-        dependentDeductionRef.current.innerHTML = currencyFormat(dependentDeduction)
-        highEarnerDeductionRef.current.innerHTML = currencyFormat(highEarnerDeduction);
-        oldDependentDeductionRef.current.innerHTML = currencyFormat(oldDependentDeduction);
-        finalPayCheckValueRef.current.innerHTML = currencyFormat(finalPayCheckValue);
+        
 
     }
 
@@ -225,6 +219,36 @@ const EmployeeListing = () => {
     useEffect(() => {  
         getEmployees();
     }, []);
+
+    useEffect(() => {
+        console.log("Current Employee update: " + currentEmployee)
+        setPayVariables()
+    }, [currentEmployee])
+
+    useEffect(() => {
+        basePayRef.current.innerHTML = currencyFormat(basePay);
+    }, [basePay])
+
+    useEffect(() => {
+        payCheckSalaryRef.current.innerHTML = currencyFormat(payCheckSalary);
+    }, [payCheckSalary]);
+    
+    useEffect(() => {
+        dependentDeductionRef.current.innerHTML = currencyFormat(dependentDeduction)
+    }, [dependentDeduction]);
+    
+    useEffect(() => {
+        highEarnerDeductionRef.current.innerHTML = currencyFormat(highEarnerDeduction);
+    }, [highEarnerDeduction]);
+    
+    useEffect(() => {
+        oldDependentDeductionRef.current.innerHTML = currencyFormat(oldDependentDeduction);
+    }, [oldDependentDeduction]);
+    
+    useEffect(() => {
+        finalPayCheckValueRef.current.innerHTML = currencyFormat(finalPayCheckValue);
+    }, [finalPayCheckValue]);
+    
 
     // Handler for when a dependent field changes
     const handleDependentFormChange = (index, event) => {
@@ -471,7 +495,7 @@ const EmployeeListing = () => {
                                     <label>Salary: </label>
                                 </div>
                                 <div className="col-6">
-                                    <span ref={payCheckSalaryRef}>{salary}</span>
+                                    <span id="idPayCheckSalary" ref={payCheckSalaryRef}></span>
                                 </div>
                             </div>
                             <div className='row'>
@@ -479,7 +503,7 @@ const EmployeeListing = () => {
                                     <label>Base Pay Per Paycheck: </label>
                                 </div>
                                 <div className="col-6">
-                                    <span ref={basePayRef}>{basePay}</span>
+                                    <span ref={basePayRef}></span>
                                 </div>
                             </div>
                             <div className='row'>
@@ -495,7 +519,7 @@ const EmployeeListing = () => {
                                     <label>Dependent Deduction: </label>
                                 </div>
                                 <div className="col-6">
-                                    <span ref={dependentDeductionRef}>{dependentDeduction}</span>
+                                    <span ref={dependentDeductionRef}></span>
                                 </div>
                             </div>
                             <div className='row'>
@@ -503,7 +527,7 @@ const EmployeeListing = () => {
                                     <label>High Earner Deduction: </label>
                                 </div>
                                 <div className="col-6">
-                                    <span ref={highEarnerDeductionRef}>{highEarnerDeduction}</span>
+                                    <span ref={highEarnerDeductionRef}></span>
                                 </div>
                             </div>
                             <div className='row'>
@@ -511,15 +535,15 @@ const EmployeeListing = () => {
                                     <label>Old Dependent Deduction: </label>
                                 </div>
                                 <div className="col-6">
-                                    <span ref={oldDependentDeductionRef}>{oldDependentDeduction}</span>
+                                    <span ref={oldDependentDeductionRef}></span>
                                 </div>
                             </div>
                             <div className='row'>
                                 <div className='col-6'>
-                                    <label>Final Paycheck: </label>
+                                    <label>Paycheck Per Pay Period: </label>
                                 </div>
                                 <div className="col-6">
-                                    <span ref={finalPayCheckValueRef}>{finalPayCheckValue}</span>
+                                    <span ref={finalPayCheckValueRef}></span>
                                 </div>
                             </div>
                         </div>
